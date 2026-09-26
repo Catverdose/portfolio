@@ -33,7 +33,7 @@
   border-top: 1px solid var(--line);
 }
 .featured-evidence > .eyebrow {
-  font-size: 0.625rem;
+  font-size: 0.6875rem;
 }
 .evidence-links {
   list-style: none;
@@ -69,8 +69,8 @@
 }
 .evidence-links a > span > span {
   display: block;
-  color: #777;
-  font-size: 0.6875rem;
+  color: var(--muted);
+  font-size: 0.75rem;
   line-height: 1.75;
   margin-top: 5px;
   word-break: keep-all;
@@ -119,7 +119,7 @@
   font-weight: 500;
 }
 .monitoring-origin > span {
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   color: #bcbcbc;
 }
 .monitoring-split {
@@ -153,8 +153,8 @@
   text-align: center;
 }
 .monitoring-lanes .mono {
-  font-size: 0.5625rem;
-  color: #777;
+  font-size: 0.6875rem;
+  color: var(--muted);
 }
 .queue-cells {
   display: flex;
@@ -188,9 +188,9 @@
 }
 .monitoring-lanes p {
   margin-top: 7px;
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   line-height: 1.8;
-  color: #777;
+  color: var(--muted);
   word-break: keep-all;
 }
 .monitoring-tradeoff {
@@ -207,8 +207,8 @@
 .diagram-note {
   text-align: center;
   margin-top: auto;
-  font-size: 0.625rem;
-  color: #777;
+  font-size: 0.75rem;
+  color: var(--muted);
 }
 .team-measurement {
   padding: 23px 28px;
@@ -223,11 +223,12 @@
 }
 .measurement-heading .eyebrow {
   color: #555;
-  font-size: 0.625rem;
+  font-size: 0.6875rem;
 }
 .measurement-heading > span:last-child {
-  font-size: 0.6875rem;
-  color: #777;
+  font-size: 0.75rem;
+  color: var(--muted);
+  word-break: keep-all;
 }
 .measurement-values {
   display: grid;
@@ -254,17 +255,18 @@
   font-size: 0.75rem;
   font-weight: 450;
   letter-spacing: 0;
-  color: #777;
+  color: var(--muted);
 }
 .measurement-values div > span {
   display: block;
   margin-top: 7px;
-  font-size: 0.6875rem;
-  color: #777;
+  font-size: 0.75rem;
+  color: var(--muted);
+  word-break: keep-all;
 }
 .team-measurement > p {
-  font-size: 0.6875rem;
-  color: #777;
+  font-size: 0.75rem;
+  color: var(--muted);
   line-height: 1.9;
   word-break: keep-all;
 }
@@ -309,7 +311,7 @@
   word-break: keep-all;
 }
 .work-description {
-  color: #737373;
+  color: var(--muted);
   font-size: 0.8125rem;
   line-height: 1.9;
   margin-top: 12px;
@@ -331,13 +333,13 @@
   background: #fafafa;
 }
 .experiment-conditions .mono {
-  font-size: 0.625rem;
+  font-size: 0.6875rem;
   color: #444;
 }
 .experiment-conditions p {
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   line-height: 1.8;
-  color: #777;
+  color: var(--muted);
   margin-top: 8px;
 }
 .concurrency-preview .table-scroll {
@@ -348,14 +350,14 @@
   min-width: 0;
   table-layout: fixed;
   border-collapse: collapse;
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
 }
 .concurrency-preview th:first-child { width: 40%; }
 .concurrency-preview caption {
   text-align: left;
-  color: #777;
-  font-size: 0.625rem;
-  padding: 0 0 9px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  padding: 10px 8px;
 }
 .concurrency-preview th,
 .concurrency-preview td {
@@ -364,14 +366,14 @@
   border-bottom: 1px solid #e9e9e9;
 }
 .concurrency-preview thead th {
-  color: #737373;
+  color: var(--muted);
   background: #fafafa;
   font-weight: 450;
   white-space: nowrap;
 }
 .concurrency-preview tbody th {
   font-family: var(--mono);
-  font-size: 0.625rem;
+  font-size: 0.6875rem;
   font-weight: 450;
 }
 .concurrency-preview td {
@@ -379,10 +381,10 @@
 }
 .result-pass,
 .result-fail {
-  padding: 3px 6px;
+  padding: 2px 6px;
   border-radius: 3px;
   font-family: 'Noto Sans KR Variable', sans-serif;
-  font-size: 0.625rem;
+  font-size: 0.75rem;
   white-space: nowrap;
 }
 .result-pass {
@@ -410,15 +412,15 @@
   font-weight: 500;
 }
 .experiment-insight p {
-  font-size: 0.6875rem;
-  color: #777;
+  font-size: 0.75rem;
+  color: var(--muted);
   line-height: 1.9;
   margin-top: 7px;
   word-break: keep-all;
 }
 .experiment-caveat {
-  font-size: 0.6875rem;
-  color: #777;
+  font-size: 0.75rem;
+  color: var(--muted);
   line-height: 1.9;
   margin: 15px 0;
   word-break: keep-all;
@@ -469,8 +471,8 @@
 }
 .learning-archive summary span span {
   display: inline-block;
-  font-size: 0.6875rem;
-  color: #888;
+  font-size: 0.75rem;
+  color: var(--muted);
   margin-left: 18px;
 }
 .learning-archive summary > span:last-child {
@@ -497,7 +499,7 @@
   border-color: #aaa;
 }
 .archive-grid .eyebrow {
-  font-size: 0.5625rem;
+  font-size: 0.6875rem;
 }
 .archive-grid strong {
   display: flex;
@@ -510,9 +512,9 @@
   overflow-wrap: anywhere;
 }
 .archive-grid p {
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   line-height: 1.9;
-  color: #777;
+  color: var(--muted);
   margin-top: 10px;
   word-break: keep-all;
 }
@@ -557,8 +559,8 @@
 }
 .related-projects button > span > span {
   display: block;
-  color: #777;
-  font-size: 0.6875rem;
+  color: var(--muted);
+  font-size: 0.75rem;
   margin-top: 6px;
   line-height: 1.7;
 }
@@ -662,10 +664,7 @@
     gap: 12px;
   }
   .featured-topbar > .mono {
-    font-size: 0.5625rem;
-  }
-  .featured-topbar .badge {
-    font-size: 0.625rem;
+    font-size: 0.6875rem;
   }
   .measurement-values {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -677,12 +676,6 @@
   }
   .measurement-values strong {
     font-size: 1.375rem;
-  }
-  .measurement-values small {
-    font-size: 0.625rem;
-  }
-  .measurement-values div > span {
-    font-size: 0.5625rem;
   }
   .monitoring-flow {
     padding: 22px 15px;
@@ -696,9 +689,6 @@
   .monitoring-lanes > div {
     padding: 13px 8px;
   }
-  .monitoring-lanes .mono {
-    font-size: 0.5rem;
-  }
   .experiment-card,
   .supporting-project {
     padding: 21px 17px;
@@ -709,9 +699,6 @@
   }
   .experiment-card .project-card-top {
     gap: 8px;
-  }
-  .experiment-card .badge {
-    font-size: 0.625rem;
   }
   .concurrency-preview th,
   .concurrency-preview td {

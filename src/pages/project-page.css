@@ -16,7 +16,7 @@
   padding: 26px 0 26px 36px;
 }
 .hero-map-note .eyebrow {
-  font-size: 0.625rem;
+  font-size: 0.6875rem;
 }
 .hero-map-note p {
   font-size: 0.9375rem;
@@ -35,7 +35,7 @@
   align-items: center;
   min-height: 72px;
   font-size: 0.75rem;
-  color: #777;
+  color: var(--muted);
   border-bottom: 1px solid var(--line);
 }
 .project-breadcrumb a {
@@ -84,7 +84,7 @@
   border-left: 1px solid var(--line);
 }
 .project-page-role .eyebrow {
-  font-size: 0.625rem;
+  font-size: 0.6875rem;
 }
 .project-page-role p {
   margin: 15px 0;
@@ -165,9 +165,10 @@
 .page-related-projects a > span > span {
   display: block;
   font-size: 0.75rem;
-  color: #777;
+  color: var(--muted);
   line-height: 1.8;
   margin-top: 7px;
+  word-break: keep-all;
 }
 .project-page-footer {
   display: flex;
@@ -184,8 +185,8 @@
 }
 .project-page-footer > .mono {
   margin-left: auto;
-  color: #888;
-  font-size: 0.625rem;
+  color: var(--muted);
+  font-size: 0.6875rem;
 }
 .load-state {
   min-height: 270px;
@@ -195,7 +196,7 @@
   flex-wrap: wrap;
   gap: 18px;
   padding: 35px;
-  color: #777;
+  color: var(--muted);
   font-size: 0.875rem;
   background: #fafafa;
 }
@@ -218,7 +219,7 @@
 }
 .route-not-found p {
   margin: 20px 0 30px;
-  color: #777;
+  color: var(--muted);
 }
 .benchmark-method {
   list-style: none;
@@ -233,17 +234,17 @@
   gap: 16px;
 }
 .benchmark-method li > span {
-  font: 0.625rem var(--mono);
-  color: #888;
-  padding-top: 5px;
+  font: 0.6875rem var(--mono);
+  color: var(--muted);
+  padding-top: 4px;
 }
 .benchmark-method strong {
   font-size: 0.8125rem;
   font-weight: 500;
 }
 .benchmark-method p {
-  color: #777;
-  font-size: 0.6875rem;
+  color: var(--muted);
+  font-size: 0.75rem;
   line-height: 1.8;
   margin-top: 7px;
 }
@@ -274,7 +275,7 @@
   }
   .project-breadcrumb {
     min-height: 60px;
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
   }
   .project-page-header {
     padding-top: 34px;

@@ -4,7 +4,9 @@ export interface GraphPoint {
   x: number
   y: number
 }
-export const graphSize = { width: 1120, height: 650 }
+// Fits the map viewport unscaled from the 1100px graph breakpoint up,
+// so node text renders at its CSS size.
+export const graphSize = { width: 1080, height: 650 }
 export const graphCenter: GraphPoint = { x: 50, y: 53 }
 
 const positions: Record<string, GraphPoint> = {

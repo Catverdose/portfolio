@@ -173,6 +173,25 @@ export default function HeroVisual({
           </span>
         </div>
       </div>
+      <nav className="map-mobile-links" aria-label="프로젝트 바로 가기">
+        {graphNodes.map((node) => (
+          <a
+            key={node.id}
+            href={`#/projects/${node.id}`}
+            className={`map-link-${node.project.tier}`}
+            onClick={(event) => openProject(event, node.project)}
+            aria-label={`${node.project.title} 프로젝트 페이지 — ${node.question}`}
+          >
+            <span className="map-node-category">
+              <span>{categoryNames[node.project.tier]}</span>
+              <span className="mono">{node.project.number}</span>
+            </span>
+            <strong>{node.project.title}</strong>
+            <span className="map-link-question">{node.question}</span>
+            <Icon name="arrow" size={16} />
+          </a>
+        ))}
+      </nav>
       <div className="map-footer">
         <span>서비스의 문제를 실험으로 검증하고, 다음 설계에 반영했습니다.</span>
         <span className="map-legend">
@@ -180,20 +199,6 @@ export default function HeroVisual({
           점선은 연관된 문제와 기술
         </span>
       </div>
-      <nav className="map-mobile-links" aria-label="프로젝트 바로 가기">
-        {graphNodes.map((node) => (
-          <a
-            key={node.id}
-            href={`#/projects/${node.id}`}
-            onClick={(event) => openProject(event, node.project)}
-            aria-label={`${node.project.title} 프로젝트 바로 가기`}
-          >
-            <span className="mono">{node.project.number}</span>
-            <strong>{node.project.title}</strong>
-            <Icon name="arrow" size={15} />
-          </a>
-        ))}
-      </nav>
     </section>
   )
 }

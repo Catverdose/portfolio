@@ -7,9 +7,10 @@
   -webkit-font-smoothing: antialiased;
   --ink: #171717;
   --body: #5d5d5d;
-  --muted: #737373;
+  /* Lightest text tone; keeps 4.5:1 on white and on #f5f5f5 section fills */
+  --muted: #6b6b6b;
   --line: #e8e8e8;
-  --mono: 'Geist Mono Variable', monospace;
+  --mono: 'Geist Mono Variable', 'Noto Sans KR Variable', monospace;
 }
 
 * {
@@ -139,7 +140,7 @@ p {
   margin-right: 10px;
 }
 .wordmark-dot {
-  color: #767676;
+  color: var(--muted);
 }
 .nav-divider {
   color: #c6c6c6;
@@ -224,7 +225,7 @@ p {
   margin-bottom: 27px;
 }
 .small-cross {
-  color: #737373;
+  color: var(--muted);
   font-size: 1.125rem;
   line-height: 1;
 }
@@ -306,7 +307,7 @@ h1 span {
 .hero-github {
   font-size: 0.75rem;
   margin-top: 21px;
-  color: #737373;
+  color: var(--muted);
 }
 .hero-footnote {
   grid-column: 1 / -1;
@@ -315,7 +316,7 @@ h1 span {
   justify-content: space-between;
   font-size: 0.75rem;
   letter-spacing: 0.04em;
-  color: #767676;
+  color: var(--muted);
 }
 .hero-footnote a {
   display: flex;
@@ -431,7 +432,7 @@ h1 span {
   align-items: center;
 }
 .focus-top > span {
-  color: #828282;
+  color: var(--muted);
   font-size: 0.75rem;
 }
 .focus-item h2 {
@@ -476,7 +477,7 @@ h1 span {
 .section-side-note {
   font-size: 0.75rem;
   line-height: 2;
-  color: #828282;
+  color: var(--muted);
   text-align: right;
 }
 .featured-project {
@@ -564,7 +565,7 @@ h1 span {
 }
 .featured-role {
   font-size: 0.75rem;
-  color: #737373;
+  color: var(--muted);
   margin-top: 13px;
 }
 .featured-actions {
@@ -584,7 +585,7 @@ h1 span {
 }
 .demo-pending {
   font-size: 0.75rem;
-  color: #737373;
+  color: var(--muted);
   border-bottom: 1px dashed #bdbdbd;
   padding: 4px 0;
 }
@@ -602,7 +603,7 @@ h1 span {
   align-items: center;
   justify-content: space-between;
   font-size: 0.75rem;
-  color: #777;
+  color: var(--muted);
 }
 .architecture-flow {
   margin: auto;
@@ -635,10 +636,10 @@ h1 span {
 .architecture-node > span {
   font-family: var(--mono);
   font-size: 0.75rem;
-  color: #767676;
+  color: var(--muted);
 }
 .node-plus {
-  color: #888;
+  color: var(--muted);
 }
 .architecture-core {
   background: #171717;
@@ -710,7 +711,7 @@ h1 span {
 }
 .architecture-footer {
   font-size: 0.75rem;
-  color: #828282;
+  color: var(--muted);
   text-align: center;
   margin-top: 8px;
 }
@@ -738,7 +739,7 @@ h1 span {
   display: block;
   font-size: 0.75rem;
   font-family: var(--mono);
-  color: #777;
+  color: var(--muted);
   margin-top: 7px;
 }
 
@@ -772,7 +773,7 @@ h1 span {
 }
 .project-number {
   font-size: 0.75rem;
-  color: #8a8a8a;
+  color: var(--muted);
 }
 .project-card h3 {
   margin-top: 25px;
@@ -808,7 +809,7 @@ h1 span {
 }
 .project-role {
   margin-top: 9px;
-  color: #7a7a7a;
+  color: var(--muted);
   font-size: 0.75rem;
   line-height: 1.8;
   word-break: keep-all;
@@ -870,7 +871,7 @@ h1 span {
 .mini-experiment .mini-experiment-header {
   background: #f8f8f8;
   font-size: 0.75rem;
-  color: #777;
+  color: var(--muted);
 }
 .card-benchmark {
   margin: 26px 0 25px;
@@ -897,7 +898,7 @@ h1 span {
 .card-benchmark span {
   font-family: var(--mono);
   font-size: 0.75rem;
-  color: #777;
+  color: var(--muted);
   display: block;
   margin-top: 5px;
 }
@@ -908,7 +909,7 @@ h1 span {
   background: #fafafa;
   border-top: 1px solid #eaeaea;
   font-size: 0.75rem;
-  color: #777;
+  color: var(--muted);
 }
 .project-planly {
   grid-column: 1/-1;
@@ -964,7 +965,7 @@ h1 span {
 }
 .stack-index {
   font-size: 0.75rem;
-  color: #888;
+  color: var(--muted);
   padding-top: 5px;
 }
 .stack-row h3 {
@@ -981,7 +982,7 @@ h1 span {
 .stack-row div > span {
   display: block;
   font-size: 0.75rem;
-  color: #797979;
+  color: var(--muted);
   line-height: 1.8;
   margin-top: 6px;
   word-break: keep-all;
@@ -1043,7 +1044,7 @@ h1 span {
   display: inline-block;
   font-size: 0.75rem;
   letter-spacing: 0.055em;
-  color: #777;
+  color: var(--muted);
   margin-top: 49px;
   background: #fafafa;
   padding: 4px 10px;
@@ -1061,7 +1062,7 @@ h1 span {
   letter-spacing: -0.035em;
 }
 .site-footer p {
-  color: #777;
+  color: var(--muted);
   font-size: 0.75rem;
 }
 .site-footer .text-link {
@@ -1247,7 +1248,7 @@ table caption {
   text-align: left;
   font-size: 0.75rem;
   padding: 12px;
-  color: #737373;
+  color: var(--muted);
   caption-side: bottom;
   background: #fafafa;
 }
@@ -1291,7 +1292,7 @@ tbody th {
   display: block;
   margin-top: 9px;
   font-size: 0.75rem;
-  color: #777;
+  color: var(--muted);
 }
 
 @media (min-width: 1440px) {

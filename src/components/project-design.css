@@ -16,7 +16,7 @@
   word-break: keep-all;
 }
 .design-heading .eyebrow {
-  font-size: 0.625rem;
+  font-size: 0.6875rem;
 }
 .design-columns {
   display: grid;
@@ -25,8 +25,8 @@
 }
 .design-path-label {
   display: block;
-  font-size: 0.625rem;
-  color: #888;
+  font-size: 0.75rem;
+  color: var(--muted);
   margin-bottom: 12px;
 }
 .design-node {
@@ -44,7 +44,7 @@
 .design-node > span:not(.design-path-label) {
   display: block;
   font-size: 0.75rem;
-  color: #777;
+  color: var(--muted);
   line-height: 1.85;
   margin-top: 7px;
   word-break: keep-all;
@@ -60,8 +60,8 @@
 .design-down {
   display: block;
   padding: 13px 0;
-  color: #888;
-  font-size: 0.6875rem;
+  color: var(--muted);
+  font-size: 0.75rem;
   text-align: center;
 }
 .design-conclusion {
@@ -104,7 +104,7 @@
   margin-top: 7px;
   font-size: 0.75rem;
   line-height: 1.8;
-  color: #777;
+  color: var(--muted);
 }
 .design-branch {
   height: 22px;
@@ -148,8 +148,8 @@
   border-radius: 0 7px 7px 0;
 }
 .design-steps li > .mono {
-  color: #999;
-  font-size: 0.625rem;
+  color: var(--muted);
+  font-size: 0.6875rem;
   padding-top: 4px;
 }
 .design-steps strong {
@@ -162,7 +162,7 @@
   margin-top: 9px;
   font-size: 0.75rem;
   line-height: 1.85;
-  color: #777;
+  color: var(--muted);
   word-break: keep-all;
 }
 .design-source {

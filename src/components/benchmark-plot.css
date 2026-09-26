@@ -13,9 +13,9 @@
 }
 
 .benchmark-plot .benchmark-count {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
-  color: #737373;
+  color: var(--muted);
 }
 
 .benchmark-count strong {
@@ -38,8 +38,8 @@
   border: 0;
   background: transparent;
   border-radius: 4px;
-  font-size: 11px;
-  color: #6b6b6b;
+  font-size: 12px;
+  color: var(--muted);
   padding: 4px 9px;
 }
 
@@ -91,12 +91,12 @@
   stroke-width: 1;
 }
 .benchmark-grid text {
-  fill: #737373;
-  font: 10px var(--mono, monospace);
+  fill: var(--muted);
+  font: 11px var(--mono, monospace);
 }
 .benchmark-grid .benchmark-axis-title {
-  fill: #626262;
-  font-size: 10px;
+  fill: #5d5d5d;
+  font-size: 12px;
   font-family: inherit;
 }
 .benchmark-range line {
@@ -131,7 +131,7 @@
 }
 .benchmark-selection label {
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: 12px;
   color: #666;
 }
 .benchmark-selection select {
@@ -143,7 +143,7 @@
   background: #fff;
   color: #333;
   font-family: inherit;
-  font-size: 11px;
+  font-size: 12px;
   text-overflow: ellipsis;
 }
 
@@ -162,8 +162,8 @@
   margin-bottom: 8px;
 }
 .benchmark-values span {
-  font-size: 10px;
-  color: #737373;
+  font-size: 12px;
+  color: var(--muted);
 }
 .benchmark-values strong {
   display: block;
@@ -173,24 +173,26 @@
 }
 .benchmark-values small {
   font: inherit;
-  color: #737373;
+  color: var(--muted);
 }
 .benchmark-plot .benchmark-detail p {
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.7;
-  color: #737373;
+  color: var(--muted);
+  word-break: keep-all;
 }
 .benchmark-plot .benchmark-caption {
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.75;
-  color: #737373;
+  color: var(--muted);
+  word-break: keep-all;
   margin-top: 5px;
 }
 .benchmark-sources {
   display: flex;
   flex-wrap: wrap;
   gap: 7px 16px;
-  font-size: 10px;
+  font-size: 12px;
   margin-top: 10px;
 }
 .benchmark-sources a {
@@ -203,9 +205,10 @@
   color: #0070f3;
 }
 .benchmark-sources span {
-  color: #999;
+  color: var(--muted);
   margin-left: auto;
   font-family: var(--mono, monospace);
+  font-size: 11px;
 }
 
 @media (max-width: 420px) {

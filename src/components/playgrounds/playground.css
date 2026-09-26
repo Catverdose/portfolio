@@ -13,7 +13,7 @@
   background: #171717;
   color: #dedede;
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.07em;
 }
 .pg-topline > span:first-child {
@@ -45,9 +45,10 @@
 .pg-disclaimer {
   display: block;
   margin-top: 14px;
-  color: #737373;
-  font-size: 11px;
+  color: var(--muted);
+  font-size: 12px;
   line-height: 1.8;
+  word-break: keep-all;
 }
 .pg-scene {
   padding: 24px 28px;
@@ -74,9 +75,9 @@
 }
 .pg-label {
   display: block;
-  color: #737373;
+  color: var(--muted);
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.04em;
   line-height: 1.6;
   text-transform: uppercase;
@@ -101,7 +102,7 @@
   background: #fff;
   color: #5b5b5b;
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.7;
 }
 .pg-pill.success {
@@ -133,8 +134,8 @@
   border-top: 1px solid #e4e4e4;
 }
 .pg-stat dt {
-  color: #737373;
-  font-size: 10px;
+  color: var(--muted);
+  font-size: 12px;
   line-height: 1.8;
 }
 .pg-stat dd {
@@ -193,13 +194,13 @@
   color: #999;
 }
 .pg-reset {
-  color: #737373;
+  color: var(--muted);
 }
 .pg-footnote {
   padding: 14px 28px;
   border-top: 1px solid #e8e8e8;
-  color: #737373;
-  font-size: 11px;
+  color: var(--muted);
+  font-size: 12px;
   line-height: 1.9;
   word-break: keep-all;
 }
@@ -235,7 +236,7 @@
   padding: 6px 3px;
   border: 1px dashed #d8d8d8;
   border-radius: 5px;
-  color: #999;
+  color: var(--muted);
   font-family: var(--mono);
   font-size: 11px;
 }
@@ -252,7 +253,6 @@
   }
   .pg-topline {
     padding: 11px 16px;
-    font-size: 8px;
   }
   .pg-heading {
     padding: 20px 17px 14px;
@@ -279,7 +279,6 @@
     padding: 13px 17px;
   }
   .pg-button {
-    font-size: 11px;
     padding: 8px 11px;
   }
   .pg-producer {
