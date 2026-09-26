@@ -3,7 +3,6 @@ import type { CSSProperties } from 'react'
 export type IconName =
   | 'arrow'
   | 'external'
-  | 'download'
   | 'github'
   | 'code'
   | 'database'
@@ -26,11 +25,6 @@ const paths: Record<IconName, React.ReactNode> = {
     <>
       <path d="M14 4h6v6m0-6L10 14" />
       <path d="M10 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5" />
-    </>
-  ),
-  download: (
-    <>
-      <path d="M12 3v12m-5-5 5 5 5-5M4 15v5h16v-5" />
     </>
   ),
   github: (

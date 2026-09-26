@@ -62,14 +62,6 @@ export default function HomePage({
               프로젝트 보기
               <Icon name="arrow" size={17} />
             </a>
-            <a
-              className="button button-secondary"
-              href={profile.pdf}
-              download="Catverdose-Backend-Portfolio.pdf"
-            >
-              <Icon name="download" size={17} />
-              포트폴리오 PDF
-            </a>
           </div>
           <a
             className="hero-github text-link"
@@ -175,14 +167,6 @@ export default function HomePage({
             <Icon name="github" size={18} />
             GitHub에서 만나기
             <Icon name="external" size={15} />
-          </a>
-          <a
-            className="button button-secondary"
-            href={profile.pdf}
-            download="Catverdose-Backend-Portfolio.pdf"
-          >
-            <Icon name="download" size={18} />
-            PDF 다운로드
           </a>
         </div>
         <span className="contact-signature mono">

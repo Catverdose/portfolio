@@ -40,7 +40,6 @@ export const profile = {
   name: 'Catverdose',
   github: 'https://github.com/Catverdose',
   email: 'eongpup@gmail.com',
-  pdf: '/catverdose-portfolio.pdf',
   live: 'https://memory.catverdose.xyz',
   // 2026-09-26 확인: ENOTFOUND. 도메인 연결을 확인한 뒤 true로 변경합니다.
   liveAvailable: false,
