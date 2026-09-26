@@ -1531,6 +1531,31 @@ tbody th {
   }
 }
 
+@media (min-width: 640px) and (max-width: 899px) {
+  .nav-github {
+    margin-left: auto;
+  }
+  .menu-toggle {
+    display: grid;
+  }
+  .main-nav {
+    display: none;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 76px;
+    border-bottom: 1px solid var(--line);
+    background: #fafafa;
+    padding: 12px 26px 20px;
+    box-shadow: 0 8px 16px #00000005;
+  }
+  .main-nav.is-open {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+}
+
 @media (max-width: 639px) {
   html {
     scroll-padding-top: 76px;

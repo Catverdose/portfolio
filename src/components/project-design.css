@@ -1,0 +1,231 @@
+.project-design {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 30px;
+  background: #fff;
+}
+.design-heading {
+  margin-bottom: 26px;
+}
+.design-heading h2 {
+  font-size: 1.25rem;
+  font-weight: 550;
+  line-height: 1.6;
+  letter-spacing: -0.035em;
+  margin-top: 10px;
+  word-break: keep-all;
+}
+.design-heading .eyebrow {
+  font-size: 0.625rem;
+}
+.design-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.design-path-label {
+  display: block;
+  font-size: 0.625rem;
+  color: #888;
+  margin-bottom: 12px;
+}
+.design-node {
+  padding: 19px 20px;
+  border: 1px solid #e3e3e3;
+  border-radius: 7px;
+  background: #fafafa;
+}
+.design-node strong {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.6;
+}
+.design-node > span:not(.design-path-label) {
+  display: block;
+  font-size: 0.75rem;
+  color: #777;
+  line-height: 1.85;
+  margin-top: 7px;
+  word-break: keep-all;
+}
+.design-node.is-current {
+  border-color: #b6c8bf;
+  background: #f7faf8;
+}
+.design-node.is-rejected {
+  border-color: #d8bcb4;
+  background: #fffaf8;
+}
+.design-down {
+  display: block;
+  padding: 13px 0;
+  color: #888;
+  font-size: 0.6875rem;
+  text-align: center;
+}
+.design-conclusion {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 24px;
+  padding: 19px 0 0;
+  border-top: 1px solid var(--line);
+}
+.design-conclusion svg {
+  margin-top: 3px;
+  color: #666;
+}
+.design-conclusion p {
+  font-size: 0.8125rem;
+  color: #666;
+  line-height: 1.9;
+  word-break: keep-all;
+}
+.design-conclusion strong {
+  color: #333;
+  font-weight: 500;
+}
+.design-shared {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 22px;
+  border: 1px solid #ddd;
+  border-radius: 7px;
+  background: #fafafa;
+  text-align: center;
+}
+.design-shared strong {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.8;
+}
+.design-shared p {
+  margin-top: 7px;
+  font-size: 0.75rem;
+  line-height: 1.8;
+  color: #777;
+}
+.design-branch {
+  height: 22px;
+  width: 50%;
+  margin: 22px auto 0;
+  border-top: 1px solid #ccc;
+  border-left: 1px solid #ccc;
+  border-right: 1px solid #ccc;
+  position: relative;
+}
+.design-branch:before {
+  position: absolute;
+  content: '';
+  height: 22px;
+  width: 1px;
+  top: -23px;
+  left: 50%;
+  background: #ccc;
+}
+.design-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.design-steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-right: 0;
+  background: #fafafa;
+}
+.design-steps li:first-child {
+  border-radius: 7px 0 0 7px;
+}
+.design-steps li:last-child {
+  border-right: 1px solid var(--line);
+  border-radius: 0 7px 7px 0;
+}
+.design-steps li > .mono {
+  color: #999;
+  font-size: 0.625rem;
+  padding-top: 4px;
+}
+.design-steps strong {
+  font-size: 0.8125rem;
+  line-height: 1.8;
+  font-weight: 500;
+  word-break: keep-all;
+}
+.design-steps p {
+  margin-top: 9px;
+  font-size: 0.75rem;
+  line-height: 1.85;
+  color: #777;
+  word-break: keep-all;
+}
+.design-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0 0;
+  min-height: 44px;
+  font-size: 0.75rem;
+  color: #555;
+}
+.design-source:hover {
+  color: #0070f3;
+}
+.project-overview {
+  max-width: 960px;
+  padding-top: 0;
+  padding-bottom: 36px;
+  font-size: 0.9375rem;
+  color: #666;
+  line-height: 1.95;
+  word-break: keep-all;
+}
+@media (max-width: 767px) {
+  .design-columns {
+    grid-template-columns: 1fr;
+  }
+  .design-branch {
+    display: none;
+  }
+  .design-shared + .design-branch + .design-columns {
+    margin-top: 16px;
+  }
+  .design-steps {
+    grid-template-columns: 1fr;
+  }
+  .design-steps li {
+    border-right: 1px solid var(--line);
+    border-bottom: 0;
+  }
+  .design-steps li:first-child {
+    border-radius: 7px 7px 0 0;
+  }
+  .design-steps li:last-child {
+    border-bottom: 1px solid var(--line);
+    border-radius: 0 0 7px 7px;
+  }
+}
+@media (max-width: 479px) {
+  .project-design {
+    padding: 22px 18px;
+  }
+  .design-heading h2 {
+    font-size: 1.125rem;
+  }
+  .design-node {
+    padding: 17px;
+  }
+  .design-conclusion {
+    gap: 9px;
+  }
+  .project-overview {
+    font-size: 0.875rem;
+    padding-bottom: 28px;
+  }
+}

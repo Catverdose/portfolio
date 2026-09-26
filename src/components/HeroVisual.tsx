@@ -1,114 +1,199 @@
-import { Component, lazy, Suspense, useEffect, useRef, useState } from 'react'
-import type { ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import type { MouseEvent } from 'react'
+import {
+  graphCenter,
+  graphEdges,
+  graphNodes,
+  graphSize,
+  isConnected,
+} from '../data/projectGraph'
+import type { Project } from '../data/projects'
+import Icon from './Icon'
+import './project-graph.css'
 
-const HeroScene = lazy(() => import('./HeroScene'))
-
-class SceneBoundary extends Component<
-  { children: ReactNode },
-  { failed: boolean }
-> {
-  state = { failed: false }
-  static getDerivedStateFromError() {
-    return { failed: true }
-  }
-  render() {
-    return this.state.failed ? null : this.props.children
-  }
+const categoryNames = {
+  featured: '대표 프로젝트',
+  experiment: '검증 실험',
+  supporting: '협업 · 확장',
 }
 
-export default function HeroVisual() {
-  const [enabled, setEnabled] = useState(false)
-  const [visible, setVisible] = useState(true)
-  const container = useRef<HTMLDivElement>(null)
+export default function HeroVisual({
+  onSelectProject,
+}: {
+  onSelectProject?: (project: Project) => void
+}) {
+  const [hoveredId, setHoveredId] = useState<string | null>(null)
+  const [focusedId, setFocusedId] = useState<string | null>(null)
+  const [size, setSize] = useState({
+    width: graphSize.width,
+    height: graphSize.height,
+  })
+  const viewport = useRef<HTMLDivElement>(null)
+  const activeId = hoveredId ?? focusedId
+  const scale = Math.min(
+    size.width / graphSize.width,
+    size.height / graphSize.height,
+    1,
+  )
+
   useEffect(() => {
-    if (!container.current) return
-    const observer = new IntersectionObserver(([entry]) =>
-      setVisible(entry.isIntersecting),
+    if (!viewport.current) return
+    const observer = new ResizeObserver(([entry]) =>
+      setSize({
+        width: entry.contentRect.width,
+        height: entry.contentRect.height,
+      }),
     )
-    observer.observe(container.current)
+    observer.observe(viewport.current)
     return () => observer.disconnect()
   }, [])
-  useEffect(() => {
-    const desktop = window.matchMedia('(min-width: 900px)')
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const update = () => {
-      if (!desktop.matches || reduced.matches) {
-        setEnabled(false)
-        return
-      }
-      try {
-        const canvas = document.createElement('canvas')
-        const gl = canvas.getContext('webgl2')
-        setEnabled(Boolean(gl))
-        gl?.getExtension('WEBGL_lose_context')?.loseContext()
-      } catch {
-        setEnabled(false)
-      }
+
+  function openProject(event: MouseEvent<HTMLAnchorElement>, project: Project) {
+    if (
+      onSelectProject &&
+      event.button === 0 &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.shiftKey &&
+      !event.altKey
+    ) {
+      event.preventDefault()
+      onSelectProject(project)
     }
-    const delay = window.setTimeout(update, 700)
-    desktop.addEventListener('change', update)
-    reduced.addEventListener('change', update)
-    return () => {
-      clearTimeout(delay)
-      desktop.removeEventListener('change', update)
-      reduced.removeEventListener('change', update)
-    }
-  }, [])
+  }
 
   return (
-    <div
-      ref={container}
-      className="hero-visual"
-      aria-label="문서, 색인, 벡터 DB, LLM으로 연결되는 백엔드 네트워크"
-      role="img"
+    <section
+      id="project-map"
+      className="project-map"
+      aria-labelledby="project-map-title"
     >
-      <div className="mesh-gradient" />
-      <div className="visual-caption mono">
-        <span>DESIGNED AROUND BOUNDARIES</span>
-        <span>FIG. 01</span>
+      <div className="project-map-heading">
+        <div>
+          <span className="map-eyebrow mono">CONNECTED WORK / 06 PROJECTS</span>
+          <h2 id="project-map-title">문제에서 프로젝트로.</h2>
+          <p id="graph-instructions">
+            프로젝트를 선택해 설계와 검증 근거를 확인하세요.
+          </p>
+        </div>
       </div>
-      <div className="scene" aria-hidden="true">
-        <svg className="static-network" viewBox="0 0 480 340">
-          <g fill="none" stroke="#c5c5c5" strokeWidth="1">
-            <path d="m30 185 210-110 210 110-210 110Z" strokeDasharray="3 5" />
-            <path d="m240 80 0 215M30 185h420" strokeDasharray="3 5" />
-          </g>
-          <g fill="#fff" stroke="#aaa">
-            <path d="m70 159 35-20 35 20v38l-35 20-35-20Zm0 0 35 20 35-20m-35 20v38" />
-            <path d="m338 159 35-20 35 20v38l-35 20-35-20Zm0 0 35 20 35-20m-35 20v38" />
-            <path d="m205 75 35-20 35 20v38l-35 20-35-20Zm0 0 35 20 35-20m-35 20v38" />
-            <path d="m205 253 35-20 35 20v38l-35 20-35-20Zm0 0 35 20 35-20m-35 20v38" />
-          </g>
-          <g fill="#171717" stroke="#777">
-            <path d="m193 155 47-27 47 27v52l-47 27-47-27Zm0 0 47 27 47-27m-47 27v52" />
-          </g>
-        </svg>
-        {enabled && visible && (
-          <div className="webgl-scene">
-            <SceneBoundary>
-              <Suspense fallback={null}>
-                <HeroScene />
-              </Suspense>
-            </SceneBoundary>
+      <div
+        ref={viewport}
+        className="map-viewport"
+        role="region"
+        aria-label="Catverdose와 6개 프로젝트의 연결 지도"
+        aria-describedby="graph-instructions"
+      >
+        <div
+          className="map-world"
+          style={{
+            width: graphSize.width,
+            height: graphSize.height,
+            transform: `translate(-50%, -50%) scale(${scale})`,
+          }}
+        >
+          <svg
+            className="map-connections"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+          >
+            {graphEdges.map((edge) => (
+              <path
+                key={edge.id}
+                d={`M ${edge.start.x} ${edge.start.y} Q ${edge.control.x} ${edge.control.y} ${edge.end.x} ${edge.end.y}`}
+                className={`map-edge${edge.related ? ' is-related' : ''}${isConnected(edge, activeId) ? ' is-active' : activeId ? ' is-muted' : ''}`}
+                vectorEffect="non-scaling-stroke"
+              />
+            ))}
+          </svg>
+          {graphEdges
+            .filter((edge) => edge.labelPosition)
+            .map((edge) => (
+              <span
+                key={edge.id}
+                className={`map-connection-label${isConnected(edge, activeId) ? ' is-active' : activeId ? ' is-muted' : ''}`}
+                style={{
+                  left: `${edge.labelPosition!.x}%`,
+                  top: `${edge.labelPosition!.y}%`,
+                }}
+              >
+                {edge.label}
+              </span>
+            ))}
+          <div
+            className="map-hub"
+            style={{ left: `${graphCenter.x}%`, top: `${graphCenter.y}%` }}
+          >
+            <span className="map-hub-mark" aria-hidden="true">
+              <Icon name="code" size={20} />
+            </span>
+            <strong>
+              Catverdose<span>.</span>
+            </strong>
+            <span className="mono">BACKEND DEVELOPER</span>
           </div>
-        )}
+          {graphNodes.map((node) => {
+            const connected =
+              activeId === node.id ||
+              graphEdges.some(
+                (edge) =>
+                  edge.related &&
+                  isConnected(edge, activeId) &&
+                  isConnected(edge, node.id),
+              )
+            return (
+              <a
+                key={node.id}
+                href={`#/projects/${node.id}`}
+                className={`map-node map-node-${node.project.tier}${activeId === node.id ? ' is-active' : activeId && !connected ? ' is-muted' : ''}`}
+                style={{ left: `${node.x}%`, top: `${node.y}%` }}
+                onClick={(event) => openProject(event, node.project)}
+                onMouseEnter={() => setHoveredId(node.id)}
+                onMouseLeave={() => setHoveredId(null)}
+                onFocus={() => setFocusedId(node.id)}
+                onBlur={() => setFocusedId(null)}
+                aria-label={`${node.project.title} 프로젝트 페이지 — ${node.question}`}
+              >
+                <span className="map-node-category">
+                  <span>{categoryNames[node.project.tier]}</span>
+                  <span className="mono">{node.project.number}</span>
+                </span>
+                <strong>{node.project.title}</strong>
+                <span className="map-node-question">{node.question}</span>
+                <span className="map-node-arrow" aria-hidden="true">
+                  <Icon name="arrow" size={16} />
+                </span>
+                <span className="map-node-port" aria-hidden="true" />
+              </a>
+            )
+          })}
+          <span className="map-coordinate mono" aria-hidden="true">
+            CATVERDOSE / ENGINEERING MAP
+          </span>
+        </div>
       </div>
-      <div className="network-label label-document">
-        <span className="node-index">01</span> Document
+      <div className="map-footer">
+        <span>서비스의 문제를 실험으로 검증하고, 다음 설계에 반영했습니다.</span>
+        <span className="map-legend">
+          <i aria-hidden="true" />
+          점선은 연관된 문제와 기술
+        </span>
       </div>
-      <div className="network-label label-gateway">
-        <span className="node-index">02</span> Gateway
-      </div>
-      <div className="network-label label-database">
-        <span className="node-index">03</span> Vector DB
-      </div>
-      <div className="network-label label-llm">
-        <span className="node-index">04</span> LLM
-      </div>
-      <div className="visual-bottom mono">
-        <span>CONSISTENCY AT EVERY STEP</span>
-        <span>↗</span>
-      </div>
-    </div>
+      <nav className="map-mobile-links" aria-label="프로젝트 바로 가기">
+        {graphNodes.map((node) => (
+          <a
+            key={node.id}
+            href={`#/projects/${node.id}`}
+            onClick={(event) => openProject(event, node.project)}
+            aria-label={`${node.project.title} 프로젝트 바로 가기`}
+          >
+            <span className="mono">{node.project.number}</span>
+            <strong>{node.project.title}</strong>
+            <Icon name="arrow" size={15} />
+          </a>
+        ))}
+      </nav>
+    </section>
   )
 }

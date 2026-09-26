@@ -1,10 +1,18 @@
 export type ProjectKind = 'PERSONAL' | 'TEAM' | 'EXPERIMENT'
 
+export interface EvidenceLink {
+  label: string
+  href: string
+  detail?: string
+}
+
 export interface CaseStudy {
   title: string
   problem: string
   decision: string
   verification: string
+  tradeoff?: string
+  evidence?: EvidenceLink[]
 }
 
 export interface Project {
@@ -12,6 +20,7 @@ export interface Project {
   number: string
   title: string
   kind: ProjectKind
+  tier: 'featured' | 'experiment' | 'supporting'
   typeLabel: string
   description: string
   role: string
@@ -22,12 +31,15 @@ export interface Project {
   overview: string
   cases: CaseStudy[]
   limitations: string
-  evidence?: { label: string; href: string }
+  evidence?: EvidenceLink
+  proofs?: EvidenceLink[]
+  relatedProjectIds?: string[]
 }
 
 export const profile = {
   name: 'Catverdose',
   github: 'https://github.com/Catverdose',
+  email: 'eongpup@gmail.com',
   pdf: '/catverdose-portfolio.pdf',
   live: 'https://memory.catverdose.xyz',
   // 2026-09-26 확인: ENOTFOUND. 도메인 연결을 확인한 뒤 true로 변경합니다.
@@ -40,13 +52,14 @@ export const projects: Project[] = [
     number: '01',
     title: 'Engineering Memory',
     kind: 'PERSONAL',
+    tier: 'featured',
     typeLabel: '개인 프로젝트',
-    description: '개발 기록을 근거로 답하는 RAG 지식 어시스턴트',
+    description: '답변보다 먼저, 색인 상태와 사용자 데이터의 경계를 설계하다',
     role: '설계 · 구현 · 인프라 · 문서 전체',
     technologies: ['Spring Boot', 'Go', 'PostgreSQL', 'pgvector', 'Ollama'],
     highlights: [
       '비동기 색인의 stale write 차단',
-      '서버 장애 이후 대화 상태 복구',
+      '사용자 격리를 검색 조건과 DB 제약으로 검증',
     ],
     github: 'https://github.com/Catverdose/engineering-memory',
     live: profile.liveAvailable ? profile.live : undefined,
@@ -60,7 +73,21 @@ export const projects: Project[] = [
         decision:
           '저장 직전에 version·status·attempt UUID를 확인합니다. 일치하지 않으면 결과를 버리고 재색인을 예약합니다. 기존 chunk 삭제, 새 chunk 삽입, READY 전환은 한 트랜잭션으로 처리합니다.',
         verification:
-          '문서 단위 bounded queue, 작업 coalescing, 재기동 복구를 구성했습니다. 단위·통합 테스트로 상태 전이와 저장 경계를 검증합니다.',
+          '같은 문서의 연속 요청을 합치고 최신 세대를 다시 처리하는지, 동시 처리 한도를 넘은 문서가 유실되지 않는지, 기동 시 PENDING 작업을 복구하는지 테스트합니다.',
+        tradeoff:
+          '오래된 계산 결과를 버리는 비용을 감수하고 저장 시점의 정합성을 우선했습니다. 실패한 색인은 자동 무한 재시도 대신 수동 재색인으로 복구합니다.',
+        evidence: [
+          {
+            label: '색인 저장 경계 구현',
+            href: 'https://github.com/Catverdose/engineering-memory/blob/main/backend/src/main/java/com/engineeringmemory/knowledge/service/DocumentIndexWriter.java',
+            detail: 'version · PENDING 상태 · attempt UUID 확인 후 chunk 교체',
+          },
+          {
+            label: '색인 큐·복구 테스트',
+            href: 'https://github.com/Catverdose/engineering-memory/blob/main/backend/src/test/java/com/engineeringmemory/knowledge/service/DocumentIndexingServiceTest.java',
+            detail: '동시 처리 한도, 동일 문서 coalescing, 기동 복구',
+          },
+        ],
       },
       {
         title: '답변 생성 도중 서버가 멈춰도 상태는 남도록',
@@ -70,6 +97,14 @@ export const projects: Project[] = [
           'beginTurn에서 사용자 메시지와 GENERATING 답변을 먼저 저장합니다. completeTurn에서 답변과 근거를 확정하고, 기동 시 남은 GENERATING은 FAILED로 복구합니다.',
         verification:
           '유사도 0.45 이상인 근거가 없으면 NO_CONTEXT를 저장하고 LLM 호출을 생략합니다. 근거 없는 답변과 불필요한 GPU 사용을 함께 제한합니다.',
+        tradeoff:
+          '중단된 생성을 자동으로 이어 붙이지 않고 FAILED로 명시합니다. 근거가 부족한 질문에는 답변 생성을 생략하며, 검색 품질 개선은 다음 검증 과제입니다.',
+        evidence: [
+          {
+            label: '대화 상태·장애 복구 설계',
+            href: 'https://github.com/Catverdose/engineering-memory/blob/main/docs/architecture.md',
+          },
+        ],
       },
       {
         title: '사용자 데이터 격리를 DB까지 이어가기',
@@ -78,23 +113,44 @@ export const projects: Project[] = [
         decision:
           'owner ID는 인증 principal에서만 가져옵니다. 모든 조회에 owner 조건을 적용하고 (id, owner_id) 복합 FK로 교차 사용자 참조를 DB에서 거부합니다.',
         verification:
-          '벡터 검색의 owner·READY·version·model 필터를 정렬·LIMIT 전에 적용합니다. 애플리케이션 조건과 DB 제약을 함께 두어 격리를 검증합니다.',
+          '다른 사용자의 문서가 더 높은 유사도를 가져도 검색에 섞이지 않는지 테스트합니다. owner 필터가 LIMIT 전에 적용되는지, 다른 소유자의 chunk 수정과 교차 사용자 참조가 거부되는지도 확인합니다.',
+        evidence: [
+          {
+            label: '사용자 경계 통합 테스트',
+            href: 'https://github.com/Catverdose/engineering-memory/blob/main/backend/src/test/java/com/engineeringmemory/knowledge/repository/DocumentChunkVectorRepositoryIsolationTest.java',
+            detail: '검색·수정·참조 경계와 owner 필터 적용 순서',
+          },
+        ],
       },
     ],
     limitations:
-      '제출 PDF의 Phase 1 기준으로 실패한 색인은 수동 재색인으로 복구하며, 마이그레이션 도구는 미도입 상태입니다. 운영 변경 사항은 저장소 문서를 기준으로 확인할 수 있습니다.',
+      'Phase 1의 상태 관리와 데이터 격리를 구현했습니다. 실패한 색인은 수동 재색인으로 복구하며 DB 마이그레이션 도구는 미도입 상태입니다. 실제 질의 기반 검색 품질 평가는 다음 단계입니다.',
     evidence: {
       label: '아키텍처 문서',
       href: 'https://github.com/Catverdose/engineering-memory/blob/main/docs/architecture.md',
     },
+    proofs: [
+      {
+        label: '사용자 격리 테스트',
+        href: 'https://github.com/Catverdose/engineering-memory/blob/main/backend/src/test/java/com/engineeringmemory/knowledge/repository/DocumentChunkVectorRepositoryIsolationTest.java',
+        detail: '다른 사용자의 문서가 검색 결과에 섞이지 않는지 확인',
+      },
+      {
+        label: '색인 큐·복구 테스트',
+        href: 'https://github.com/Catverdose/engineering-memory/blob/main/backend/src/test/java/com/engineeringmemory/knowledge/service/DocumentIndexingServiceTest.java',
+        detail: '연속 수정·동시 작업·재기동 상황 재현',
+      },
+    ],
+    relatedProjectIds: ['vector-db-benchmark'],
   },
   {
     id: 'petcoupon',
     number: '02',
     title: 'PetCoupon',
     kind: 'TEAM',
+    tier: 'featured',
     typeLabel: '팀 · 백엔드 6명',
-    description: '반려동물 이벤트 기반 선착순 쿠폰 발급 시스템',
+    description: '선착순 발급을 뒷받침하는 관리자 경합 처리와 운영 모니터링',
     role: '이벤트·쿠폰 관리 · 관리자 API · 스케줄러 · 모니터링',
     technologies: ['Spring Boot', 'JPA', 'MySQL', 'Redis', 'SSE'],
     highlights: [
@@ -103,7 +159,7 @@ export const projects: Project[] = [
     ],
     github: 'https://github.com/PetCare-Platform/petcoupon-backend',
     overview:
-      '대량 요청에서도 초과 발급 없이 사용자당 한 장을 발급하는 팀 프로젝트입니다. Redis·Kafka 발급 파이프라인은 팀원이 담당했고, 저는 파이프라인이 참조하는 이벤트·쿠폰 관리와 관리자 운영·모니터링을 맡았습니다. 제출 PDF 기준 병합 PR 24개, 통합 테스트 시나리오 16개입니다.',
+      '대량 요청에서도 초과 발급 없이 사용자당 한 장을 발급하는 팀 프로젝트입니다. Redis·Kafka 발급 파이프라인은 팀원이 담당했고, 저는 이벤트·쿠폰 관리와 관리자 운영·모니터링을 맡았습니다. 팀 부하 테스트는 AWS EC2 3대, 20,000 VU, 쿠폰 재고 10,000개 조건에서 수행했습니다. 반복 실행 2~5회의 접수 처리량 평균은 1,030 TPS, 접수 응답 p95 평균은 16.31초로 지연 목표에 미달했습니다. 202 접수 이후 비동기로 발급을 확정하며, DB 확정 완료 시간의 회차 평균은 220.5초였습니다.',
     cases: [
       {
         title: '여러 갱신 경로가 같은 데이터를 만날 때',
@@ -112,16 +168,42 @@ export const projects: Project[] = [
         decision:
           '관리자 수정 경로를 PESSIMISTIC_WRITE로 직렬화하고 락 획득 순서를 통일했습니다. 상태 전이는 현재 상태를 조건에 둔 UPDATE로 중복 적용을 막았습니다.',
         verification:
-          '통합 테스트로 경합 시나리오를 확인하고 조회 SQL 수를 고정했습니다. 팀 공동 부하 테스트에서는 20,000 요청, 초과·중복 발급 0건, 1,030 TPS를 기록했습니다. 이는 발급 파이프라인을 포함한 팀 전체 성과입니다.',
+          '통합 테스트 시나리오 16개로 관리자 경합과 상태 전이 등을 확인했습니다. 팀 공동 부하 테스트에서는 초과·중복 발급 0건을 기록했지만 접수 응답 p95의 회차 평균 16.31초로 500ms 목표와 3초 허용선을 넘었습니다. 처리량·지연·발급 정합성은 팀 전체 결과입니다.',
+        tradeoff:
+          '충돌하는 수정은 대기시키고 락 획득 순서를 통일했습니다. 발급의 정합성을 지킨 결과와 목표에 미달한 응답 지연을 구분해 기록합니다.',
+        evidence: [
+          {
+            label: '팀 성과·부하 테스트 조건',
+            href: 'https://github.com/PetCare-Platform/petcoupon-backend/blob/main/README.md',
+            detail: '측정 환경, 반복 실행별 처리량·지연, 목표 대비 결과',
+          },
+          {
+            label: '담당 범위와 기여 내역',
+            href: 'https://github.com/PetCare-Platform/petcoupon-backend/blob/main/docs/contributors.md',
+          },
+        ],
       },
       {
         title: '모니터링 장애가 비즈니스 요청을 막지 않도록',
         problem:
           'SSE 연결 종료 → 예외 로깅 → 로그 재전송 → 전송 실패가 반복되며 오류가 스스로 증폭됐습니다. 느린 구독자도 로그를 쓰는 요청에 영향을 줄 수 있었습니다.',
         decision:
-          'feedback loop를 끊고 구독자마다 bounded queue를 분리했습니다. 큐가 차면 비즈니스 요청을 차단하는 대신 모니터링 이벤트를 버립니다.',
+          '전송 실패의 feedback loop를 끊고 구독자마다 bounded queue와 전송 작업을 분리했습니다. 로그 생산자는 대기하지 않는 offer로 넣고, 큐가 차면 오래된 이벤트를 버립니다.',
         verification:
-          '손실은 events-dropped 이벤트와 monitoring.sse.events.dropped 지표로 노출합니다. 로그 마스킹 비용에도 상한을 두어 서비스 가용성을 우선했습니다.',
+          '느린 구독자가 다른 구독자를 지연시키지 않는지, 로깅 스레드가 차단되지 않는지, 큐가 찼을 때 최신 이벤트를 유지하는지 테스트합니다. 손실은 events-dropped 이벤트와 dropped 지표로 알립니다.',
+        tradeoff:
+          '모니터링 이벤트의 완전한 전달보다 비즈니스 요청의 가용성을 우선했습니다. 손실을 숨기지 않고 클라이언트와 지표에 드러냅니다.',
+        evidence: [
+          {
+            label: 'SSE 장애 격리 테스트',
+            href: 'https://github.com/PetCare-Platform/petcoupon-backend/blob/main/src/test/java/com/mycom/petcoupon/monitoring/service/MonitoringSseServiceTest.java',
+            detail: '느린 구독자 격리 · 비차단 로그 생산 · overflow 손실 통지',
+          },
+          {
+            label: 'SSE 전송·큐 구현',
+            href: 'https://github.com/PetCare-Platform/petcoupon-backend/blob/main/src/main/java/com/mycom/petcoupon/monitoring/service/MonitoringSseService.java',
+          },
+        ],
       },
     ],
     limitations:
@@ -130,12 +212,26 @@ export const projects: Project[] = [
       label: '직접 기여한 PR',
       href: 'https://github.com/PetCare-Platform/petcoupon-backend/pulls?q=is%3Apr+is%3Amerged+author%3ACatverdose',
     },
+    proofs: [
+      {
+        label: '느린 구독자 격리 테스트',
+        href: 'https://github.com/PetCare-Platform/petcoupon-backend/blob/main/src/test/java/com/mycom/petcoupon/monitoring/service/MonitoringSseServiceTest.java',
+        detail: '모니터링 장애가 비즈니스 요청에 번지지 않는지 확인',
+      },
+      {
+        label: '본인 기여 범위',
+        href: 'https://github.com/PetCare-Platform/petcoupon-backend/blob/main/docs/contributors.md',
+        detail: '이벤트·쿠폰 관리, 관리자 운영, 모니터링',
+      },
+    ],
+    relatedProjectIds: ['concurrency'],
   },
   {
     id: 'concurrency',
     number: '03',
     title: 'Coupon Concurrency',
     kind: 'EXPERIMENT',
+    tier: 'experiment',
     typeLabel: '개인 실험 · 팀 실험 확장',
     description: '초과 발급이 없어도 깨지는 동시성 제어의 경계',
     role: '9개 전략 설계 · 구현 · 측정 · 분석',
@@ -151,11 +247,18 @@ export const projects: Project[] = [
       {
         title: '최종 재고가 맞아도 정상 회원은 탈락할 수 있다',
         problem:
-          'REDIS_DECR와 LUA는 중복 회원을 확인하기 전에 재고를 예약합니다. DB 유니크 충돌을 보상하기 전까지 일시적으로 품절이 됩니다.',
+          '동일 회원의 동시 요청이 사전 중복 조회를 함께 통과하면 Redis 재고를 각각 예약합니다. DB 유니크 충돌 후 보상되기 전까지 일시 품절이 발생합니다.',
         decision:
           '초과 발급 여부뿐 아니라 대상자 전원 발급, 응답 분류, 재고 원장의 세 기준을 분리해 검사했습니다.',
         verification:
           'VU 50에서 DECR는 9,999명, LUA는 9,998명에게 발급됐습니다. 최종 원장은 일치했지만 정상 회원의 탈락을 확인했습니다.',
+        evidence: [
+          {
+            label: '중복 회원 정순 실험 보고서',
+            href: 'https://github.com/Catverdose/concurrency-strategies/blob/main/k6/results/r0816dup1/duplicate-user-report.md',
+            detail: '대상 회원 10,000명 · 각 3회 요청 · VU 50',
+          },
+        ],
       },
       {
         title: 'WATCH 재시도가 연결을 소진하는 구조',
@@ -164,17 +267,35 @@ export const projects: Project[] = [
         decision:
           '다른 전략의 실험을 오염시키지 않도록 WATCH만 단독 실행해 원인을 분리했습니다.',
         verification:
-          'VU 10·50·100·200에서 재현했습니다. VU 50에서는 30,000 요청 중 26,991건이 응답을 받지 못했습니다. 역순 재실행에서도 실패 유형은 같았습니다.',
+          'VU 10·50·100·200에서 재현했습니다. 정순 보고서의 VU 50 단독 실행에서는 30,000 요청 중 27,000건이 전송에 실패했습니다. 역순 재실행에서도 같은 실패 유형을 관찰했습니다.',
+        tradeoff:
+          '이 결과는 현재 연결 관리 구현과 로컬 실행 환경에 한정됩니다. Redis WATCH 자체의 한계로 일반화하지 않고 연결 재사용 개선 후 재측정이 필요합니다.',
+        evidence: [
+          {
+            label: 'WATCH 연결 고갈 재현 결과',
+            href: 'https://github.com/Catverdose/concurrency-strategies/blob/main/k6/results/r0816dup1/duplicate-user-report.md',
+            detail: '전송 실패·TIME_WAIT 관찰값과 성능 비교 제외 이유',
+          },
+        ],
       },
     ],
     limitations:
       '로컬 단일 호스트의 1차 실험입니다. 조건별 1회와 역순 재실행 결과로 성능 순위를 확정하지 않았습니다. JVM_LOCK의 통과도 단일 인스턴스 조건에 한정됩니다.',
+    proofs: [
+      {
+        label: '실험 보고서·원시 결과',
+        href: 'https://github.com/Catverdose/concurrency-strategies/blob/main/k6/results/r0816dup1/duplicate-user-report.md',
+        detail: '정순 실험의 응답 분포·재고 원장·발급 대상 검증',
+      },
+    ],
+    relatedProjectIds: ['petcoupon'],
   },
   {
     id: 'vector-db-benchmark',
     number: '04',
     title: 'Vector DB Benchmark',
     kind: 'EXPERIMENT',
+    tier: 'experiment',
     typeLabel: 'UBot 팀 내 실험',
     description: '같은 검색 품질, 같은 자원 조건에서의 비교',
     role: 'Benchmark harness 구현 · 측정 설계',
@@ -185,7 +306,7 @@ export const projects: Project[] = [
     ],
     github: 'https://github.com/ureca-UBot/UBot-VertorDBTest',
     overview:
-      'RAG 서비스의 Vector DB 후보를 비교하는 harness입니다. 합성 10k chunk, BGE-M3 dense 1024d, cosine Top-10 조건에서 DB별 4 vCPU·8 GiB를 고정하고, 검색 설정 124개를 독립 재구축 5회로 측정했습니다.',
+      'RAG 서비스의 Vector DB 후보를 비교하는 harness입니다. 합성 10k chunk, BGE-M3 dense 1024d, cosine Top-10, 동시성 10 조건에서 DB별 4 vCPU·8 GiB를 고정했습니다. 5개 DB·14개 구성의 검색 설정 124개를 독립 재구축 5회, 총 620회 측정했습니다.',
     cases: [
       {
         title: '비교 전에 입력과 정답부터 고정',
@@ -195,25 +316,49 @@ export const projects: Project[] = [
           '입력은 SHA-256으로 검증하고 Java exact cosine search를 Ground Truth로 사용했습니다. Calibration query와 evaluation query를 분리했습니다.',
         verification:
           'Recall@10, latency, QPS, CPU, RAM, index readiness를 함께 수집했습니다. 각 측정점에서 자원 샘플을 30개 이상 기록했습니다.',
+        tradeoff:
+          '같은 검색 품질 구간에서 지연과 처리량을 비교합니다. 합성 데이터에서 빠른 구성을 실제 서비스의 최종 선택으로 확정하지 않았습니다.',
+        evidence: [
+          {
+            label: '공정 비교 조건과 산포도',
+            href: 'https://github.com/ureca-UBot/UBot-VertorDBTest/blob/dev/docs/07-results/fairness-v2-results-20260913.md',
+            detail: '124개 검색 설정 × 독립 재구축 5회',
+          },
+        ],
       },
       {
         title: '불리한 측정도 결과에서 지우지 않기',
         problem:
           '이상치와 warm-up 미달을 제거하면 실제 변동성이 가려지고 특정 구성이 과대평가될 수 있습니다.',
         decision:
-          '원시 JSON·CSV와 warning 170건을 보존했습니다. 근거 없는 Recall·p95·RAM 임계값을 탈락 판정에 사용하지 않았습니다.',
+          '원시 JSON·CSV와 워밍업 경고 170건을 보존했습니다. 보고서의 후보 해석에서는 합의되지 않은 Recall·p95·RAM 자동 탈락 기준을 적용하지 않았으며, 원시 판정과 코드 기본값은 보존했습니다.',
         verification:
           'Milvus DISKANN은 5회 관찰에서 Recall 변동이 있었습니다. 실제 1k~10k chunk → pgvector baseline → 독립 holdout → 운영 복잡도 검토를 다음 검증 단계로 정의했습니다.',
+        evidence: [
+          {
+            label: '변동성·warning·해석 제한',
+            href: 'https://github.com/ureca-UBot/UBot-VertorDBTest/blob/dev/docs/07-results/fairness-v2-results-20260913.md',
+          },
+        ],
       },
     ],
     limitations:
       '합성 10k·Top-10·동시성 10의 탐색 결과이며 제품 선택의 최종 근거가 아닙니다. Recall이 다른 구성을 속도만으로 줄 세우지 않았습니다.',
+    proofs: [
+      {
+        label: '620회 측정 보고서',
+        href: 'https://github.com/ureca-UBot/UBot-VertorDBTest/blob/dev/docs/07-results/fairness-v2-results-20260913.md',
+        detail: '검색 품질·지연·처리량과 반복 측정의 변동성',
+      },
+    ],
+    relatedProjectIds: ['ubot', 'engineering-memory'],
   },
   {
     id: 'ubot',
     number: '05',
     title: 'UBot Backend',
     kind: 'TEAM',
+    tier: 'supporting',
     typeLabel: '팀 프로젝트',
     description: '통신사 고객 상담용 RAG 챗봇의 개발·테스트 기반',
     role: '로컬·CI 환경 구성 · 테스트 격리 · 배포 이미지',
@@ -240,16 +385,42 @@ export const projects: Project[] = [
           '로컬 Compose와 CI가 같은 PostgreSQL Dockerfile을 사용합니다. Extension 생성은 Flyway로 통일하고 Testcontainers로 독립 DB를 생성합니다.',
         verification:
           'CI에서 실제 vector 저장·검색과 PostGIS spatial function을 실행합니다. Java 21 multi-stage 이미지로 빌드 도구와 실행 환경도 분리했습니다.',
+        tradeoff:
+          'DB 확장은 실제 이미지로 검증하고 임베딩 모델은 결정적인 테스트 대역을 사용합니다. 이 테스트의 범위는 DB 통합이며 모델의 검색 품질은 별도 실험으로 다룹니다.',
+        evidence: [
+          {
+            label: '독립 DB·임베딩 테스트 설정',
+            href: 'https://github.com/ureca-UBot/UBot-BE/blob/develop/src/test/java/com/ubot/PgvectorTestConfiguration.java',
+          },
+          {
+            label: '테스트·빌드 CI',
+            href: 'https://github.com/ureca-UBot/UBot-BE/blob/develop/.github/workflows/ci.yml',
+          },
+        ],
       },
     ],
     limitations:
       '이 프로젝트에서 제 기여는 팀 개발·테스트 실행 기반입니다. RAG와 상담 기능 전체를 개인 성과로 주장하지 않습니다.',
+    proofs: [
+      {
+        label: '로컬과 CI의 DB 환경 통일',
+        href: 'https://github.com/ureca-UBot/UBot-BE/blob/develop/src/test/java/com/ubot/PgvectorTestConfiguration.java',
+        detail: '공유 Dockerfile · 테스트별 독립 컨테이너',
+      },
+      {
+        label: '직접 기여한 PR',
+        href: 'https://github.com/ureca-UBot/UBot-BE/pulls?q=is%3Apr+is%3Amerged+author%3ACatverdose',
+        detail: '개발·테스트 환경과 배포 이미지 변경 내역',
+      },
+    ],
+    relatedProjectIds: ['vector-db-benchmark'],
   },
   {
     id: 'planly',
     number: '06',
     title: 'Planly',
     kind: 'PERSONAL',
+    tier: 'supporting',
     typeLabel: '3인 팀 → 개인 확장',
     description: 'Todo와 공유 Calendar를 연결한 일정 관리 서비스',
     role: '팀 프로젝트 인수 · 구조 재편 · 기능 확장',
@@ -270,23 +441,51 @@ export const projects: Project[] = [
           'JWT 인증에 리소스 소유권 검증을 추가했습니다. Todo–Schedule 연동, 이메일 기반 멤버 관리, 하위 Todo와 Eisenhower Matrix 분류로 확장했습니다.',
         verification:
           '기존 팀 범위인 기본 CRUD·완료 처리·JWT 인증과, 개인 확장 범위인 구조 분리·소유권·검색·분류·일정 연동을 구분해 저장소에 정리했습니다.',
+        evidence: [
+          {
+            label: 'Todo–Schedule 연동 구현',
+            href: 'https://github.com/Catverdose/planly-web/blob/main/backend/src/main/java/com/example/demo/todo/service/TodoScheduleLinkService.java',
+            detail: '사용자 범위 조회와 트랜잭션, 중복 연결 충돌 처리',
+          },
+          {
+            label: '기존 팀 범위와 개인 확장',
+            href: 'https://github.com/Catverdose/planly-web/blob/main/README.md',
+          },
+        ],
       },
     ],
     limitations:
-      '기존 팀 프로젝트와 개인 확장 범위를 구분해 기재했습니다. 기능별 구현과 최신 상태는 저장소에서 확인할 수 있습니다.',
+      '기존 팀 프로젝트와 개인 확장 범위를 구분해 기재했습니다. 현재는 구현과 범위 설명을 근거로 제시하며, 일정 연동·권한 경계를 다루는 회귀 테스트는 보강할 과제입니다.',
+    proofs: [
+      {
+        label: '개인 확장 범위 확인',
+        href: 'https://github.com/Catverdose/planly-web/blob/main/README.md',
+        detail: '기존 팀 기능과 이후 구조·기능 확장 구분',
+      },
+    ],
+    relatedProjectIds: ['petcoupon'],
   },
 ]
+
+export const concurrencyRun = {
+  label: 'r0816dup1 · 중복 회원 정순 실험',
+  conditions:
+    '회원 10,000명 × 서로 다른 requestId로 3회 요청 · 재고 10,000개 · VU 50 · 단일 애플리케이션 인스턴스',
+  source:
+    'https://github.com/Catverdose/concurrency-strategies/blob/main/k6/results/r0816dup1/duplicate-user-report.md',
+  note: '2026-08-16 정순 보고서 기준입니다. WATCH 행은 보고서에 통합된 r0816dup2w 단독 재실행 결과입니다. 조건별 1회 관찰이며, 로컬 단일 호스트 결과를 일반적인 전략 순위로 해석하지 않습니다.',
+}
 
 export const concurrencyResults = [
   ['JVM_LOCK', '10,000', '일치', '일치', '통과'],
   ['PESSIMISTIC', '10,000', '중복 2건 → SOLD_OUT', '일치', '실패'],
   ['CONDITIONAL', '10,000', '중복 2건 → SOLD_OUT', '일치', '실패'],
-  ['DIRECT', '10,000', '일치', '차감 2,502 / 발급 10,000', '실패'],
+  ['DIRECT', '10,000', '일치', '차감 2,508 / 발급 10,000', '실패'],
   ['REDIS_DECR', '9,999', '일시 SOLD_OUT 13건', '일치', '실패'],
   ['REDIS_LUA', '9,998', '일시 SOLD_OUT 13건', '일치', '실패'],
-  ['REDIS_LOCK', '9,999', '한도 초과 287건', '일치', '실패'],
-  ['OPTIMISTIC', '9,997', '한도 초과 11건', '일치', '실패'],
-  ['REDIS_WATCH', '946', '무응답 26,991건', '일치', '실패'],
+  ['REDIS_LOCK', '10,000', '품절 9 / 내부 오류 312건', '일치', '실패'],
+  ['OPTIMISTIC', '9,999', '내부 오류 14건', '일치', '실패'],
+  ['REDIS_WATCH', '945', '전송 실패 27,000건', '일치', '실패'],
 ]
 
 export const stack = [
