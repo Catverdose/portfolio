@@ -186,7 +186,11 @@ export default function HomePage({
           <div>
             <div className="eyebrow">TOOLS, IN CONTEXT</div>
             <h2 id="stack-title">기술은 문제를 푸는 수단.</h2>
-            <p>이름을 나열하기보다, 어떤 책임을 맡겼는지 설명합니다.</p>
+            <p>
+              이름을 나열하기보다, 어떤 책임을 맡겼는지 설명합니다.{' '}
+              <strong className="stack-legend">진하게</strong> 표시한 것이
+              주력이고, 나머지는 프로젝트에서 사용한 경험입니다.
+            </p>
           </div>
           <Icon name="terminal" size={34} />
         </div>
@@ -196,7 +200,17 @@ export default function HomePage({
               <span className="stack-index mono">0{index + 1}</span>
               <h3>{item.category}</h3>
               <div>
-                <p>{item.technologies}</p>
+                <p className="stack-technologies">
+                  {[
+                    ...item.primary.map((name) => ({ name, primary: true })),
+                    ...item.used.map((name) => ({ name, primary: false })),
+                  ].map((tech, index) => (
+                    <span key={tech.name}>
+                      {index > 0 && ' · '}
+                      {tech.primary ? <strong>{tech.name}</strong> : tech.name}
+                    </span>
+                  ))}
+                </p>
                 <span>{item.context}</span>
               </div>
             </div>

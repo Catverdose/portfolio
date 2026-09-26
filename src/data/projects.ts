@@ -24,6 +24,8 @@ export interface Project {
   typeLabel: string
   description: string
   role: string
+  /** Team projects only: size of my share, verifiable on GitHub */
+  contribution?: string[]
   technologies: string[]
   highlights: string[]
   github: string
@@ -121,6 +123,33 @@ export const projects: Project[] = [
           },
         ],
       },
+      {
+        title: '모델 서버 한 대를 대화와 색인이 나눠 쓸 때',
+        problem:
+          '답변 생성과 문서 임베딩이 GPU 한 대의 Ollama를 함께 씁니다. 색인이 몰리면 대화가 늦어지고, 대화가 끊이지 않으면 색인이 끝없이 밀릴 수 있습니다. 요청이 한꺼번에 들어오면 모델 앞에 대기열이 쌓입니다.',
+        decision:
+          '대화는 동시 50건까지만 받고, 넘으면 기다리게 하지 않고 즉시 MODEL_BUSY로 거절합니다. 색인은 대화가 있으면 배치마다 최대 30초까지 양보한 뒤 진행합니다. IP별 요청 제한을 gateway와 backend에 따로 두고, 바깥 계층(nginx > gateway > backend > Ollama)일수록 timeout을 길게 잡아 안쪽이 먼저 끝나게 했습니다.',
+        verification:
+          '대화 중에는 색인이 비켜서고 마지막 대화가 끝나면 다시 도는지, 대화가 끊이지 않아도 색인이 굶지 않는지 테스트합니다. 설정 테스트로 운영 프로필이 요청 제한을 느슨하게 덮지 않는지, 프록시 헤더를 Docker 프로필에서만 신뢰하는지(IP 위조 방지), 스트림 timeout이 모델 timeout보다 긴지 고정했습니다.',
+        tradeoff:
+          '대화 응답성을 위해 색인 완료가 늦어질 수 있습니다. 양보에 30초 상한을 둬 색인이 굶지 않게 했고, 한도를 넘는 대화는 대기열에 쌓는 대신 거절해 지연이 누적되지 않게 했습니다.',
+        evidence: [
+          {
+            label: '대화 우선·색인 양보 테스트',
+            href: 'https://github.com/Catverdose/engineering-memory/blob/main/backend/src/test/java/com/engineeringmemory/llm/workload/ModelWorkloadGateTest.java',
+            detail: '즉시 거절 · 양보 후 재개 · 색인 기아 방지',
+          },
+          {
+            label: '운영 설정 안전장치 테스트',
+            href: 'https://github.com/Catverdose/engineering-memory/blob/main/backend/src/test/java/com/engineeringmemory/ConfigYamlTest.java',
+            detail: '요청 제한 · 프록시 헤더 신뢰 범위 · timeout 순서',
+          },
+          {
+            label: 'timeout 사슬과 요청 제한 설계',
+            href: 'https://github.com/Catverdose/engineering-memory/blob/main/docs/architecture.md',
+          },
+        ],
+      },
     ],
     limitations:
       'Phase 1의 상태 관리와 데이터 격리를 구현했습니다. 실패한 색인은 수동 재색인으로 복구하며 DB 마이그레이션 도구는 미도입 상태입니다. 실제 질의 기반 검색 품질 평가는 다음 단계입니다.',
@@ -139,6 +168,11 @@ export const projects: Project[] = [
         href: 'https://github.com/Catverdose/engineering-memory/blob/main/backend/src/test/java/com/engineeringmemory/knowledge/service/DocumentIndexingServiceTest.java',
         detail: '연속 수정·동시 작업·재기동 상황 재현',
       },
+      {
+        label: '대화 우선·색인 양보 테스트',
+        href: 'https://github.com/Catverdose/engineering-memory/blob/main/backend/src/test/java/com/engineeringmemory/llm/workload/ModelWorkloadGateTest.java',
+        detail: 'GPU 한 대에서 대화 지연과 색인 기아를 함께 막기',
+      },
     ],
     relatedProjectIds: ['vector-db-benchmark'],
   },
@@ -151,6 +185,7 @@ export const projects: Project[] = [
     typeLabel: '팀 · 백엔드 6명',
     description: '선착순 발급을 뒷받침하는 관리자 경합 처리와 운영 모니터링',
     role: '이벤트·쿠폰 관리 · 관리자 API · 스케줄러 · 모니터링',
+    contribution: ['Merged PR 24개', '테스트 파일 50여 개', '통합 시나리오 16개 담당'],
     technologies: ['Spring Boot', 'JPA', 'MySQL', 'Redis', 'SSE'],
     highlights: [
       '관리자 수정과 발급·스케줄러의 경합 제어',
@@ -189,7 +224,7 @@ export const projects: Project[] = [
         decision:
           '전송 실패의 feedback loop를 끊고 구독자마다 bounded queue와 전송 작업을 분리했습니다. 로그 생산자는 대기하지 않는 offer로 넣고, 큐가 차면 오래된 이벤트를 버립니다.',
         verification:
-          '느린 구독자가 다른 구독자를 지연시키지 않는지, 로깅 스레드가 차단되지 않는지, 큐가 찼을 때 최신 이벤트를 유지하는지 테스트합니다. 손실은 events-dropped 이벤트와 dropped 지표로 알립니다.',
+          '느린 구독자가 다른 구독자를 지연시키지 않는지, 로깅 스레드가 차단되지 않는지, 큐가 찼을 때 최신 이벤트를 유지하는지 테스트합니다. 여러 생산자가 동시에 넣을 때 빈자리를 다른 스레드가 먼저 차지하면 삽입이 빠지는 경쟁을 테스트로 찾아, 매 poll 뒤 다시 시도하도록 고쳤습니다. 손실은 events-dropped 이벤트와 dropped 지표로 알립니다.',
         tradeoff:
           '모니터링 이벤트의 완전한 전달보다 비즈니스 요청의 가용성을 우선했습니다. 손실을 숨기지 않고 클라이언트와 지표에 드러냅니다.',
         evidence: [
@@ -204,9 +239,54 @@ export const projects: Project[] = [
           },
         ],
       },
+      {
+        title: 'Redis와 DB가 서로 다른 재고를 말할 때',
+        problem:
+          '발급 재고는 Redis가 실시간으로 판정하고 MySQL은 비동기로 확정합니다. 관리자가 쿠폰을 만들거나 수량을 바꿀 때 두 저장소가 어긋나면 발급이 막히거나 화면의 수치가 틀어집니다. 목록에서 쿠폰마다 Redis를 읽으면 왕복이 늘고, 한 건의 오류가 목록 전체를 실패시킵니다.',
+        decision:
+          '쿠폰 생성과 총수량 수정 때 Redis 발급 재고를 함께 초기화하고, Redis 초기화가 실패하거나 값이 되읽히지 않으면 DB 변경을 롤백합니다. 목록은 DB에 확정된 재고와 그 기준 시각(stockUpdatedAt)을, 단건 조회는 Redis 실시간 재고를 씁니다.',
+        verification:
+          '생성·수정 뒤 Redis 재고가 새 수량과 같은지 통합 테스트로 확인합니다. 목록 조회는 Hibernate 통계로 쿠폰 수만큼 쿼리가 늘지 않는지 고정했습니다.',
+        tradeoff:
+          'Redis는 DB 트랜잭션에 참여하지 않아 두 저장소가 하나의 원자적 트랜잭션으로 묶이지는 않습니다. Redis 쪽 실패는 롤백으로 막고, 목록 수치가 확정 시점만큼 늦는 것은 기준 시각으로 드러냅니다.',
+        evidence: [
+          {
+            label: 'Redis 재고 동기화 통합 테스트',
+            href: 'https://github.com/PetCare-Platform/petcoupon-backend/blob/main/src/test/java/com/mycom/petcoupon/coupon/controller/AdminCouponRedisStockSyncIntegrationTest.java',
+            detail: '쿠폰 생성·총수량 수정 뒤 Redis 발급 재고 일치',
+          },
+          {
+            label: '목록 조회 쿼리 수 테스트',
+            href: 'https://github.com/PetCare-Platform/petcoupon-backend/blob/main/src/test/java/com/mycom/petcoupon/coupon/repository/CouponRepositoryCouponPageTest.java',
+            detail: '쿠폰마다 추가 쿼리가 나가지 않는지 Hibernate 통계로 확인',
+          },
+        ],
+      },
+      {
+        title: '관리자 인증이 설정 실수로 열리지 않도록',
+        problem:
+          '관리자 API는 이벤트·쿠폰 수정과 운영 모니터링을 엽니다. 인증 코드가 비어 있거나 토큰 원문이 저장소에 남으면, 설정 실수나 저장소 노출이 곧 관리자 권한 노출로 이어집니다.',
+        decision:
+          '세션 토큰은 원문 대신 해시로 Redis에 저장하고 TTL을 적용합니다. 인증 코드는 상수 시간 비교로 확인하고, 빈 값으로 설정되면 세션 발급을 거절합니다. 모니터링 SSE로 나가는 로그에서는 관리자 키·쿠키 같은 인증 정보를 마스킹했습니다.',
+        verification:
+          '토큰이 해시로만 저장되는지, 폐기한 세션만 무효화되고 다른 세션은 유지되는지, 인증 코드가 비어 있으면 입력값과 무관하게 발급이 거절되는지 테스트합니다.',
+        tradeoff:
+          '인증 코드 하나로 세션을 발급하는 구조라 관리자 계정별 권한 구분은 없습니다. 환경변수가 없으면 개발용 기본 코드가 적용되므로 배포 전에 반드시 교체해야 합니다.',
+        evidence: [
+          {
+            label: '관리자 세션 테스트',
+            href: 'https://github.com/PetCare-Platform/petcoupon-backend/blob/main/src/test/java/com/mycom/petcoupon/global/auth/service/AdminSessionServiceImplTest.java',
+            detail: '해시 저장 · TTL · 세션별 폐기',
+          },
+          {
+            label: '인증 코드 누락 시 거절 테스트',
+            href: 'https://github.com/PetCare-Platform/petcoupon-backend/blob/main/src/test/java/com/mycom/petcoupon/global/auth/service/AdminSessionAuthCodeMissingTest.java',
+          },
+        ],
+      },
     ],
     limitations:
-      'Redis Stream DLQ의 관리자 조회·재처리 API는 남은 과제입니다. 현재 XRANGE로 수동 확인하며, 처리 절차를 먼저 정의해야 합니다.',
+      '관리자 인증은 단일 인증 코드 기반이라 계정별 권한이 없습니다. 확정 처리량(Stream Consumer 단일 스레드)과 접수 응답 p95는 팀 차원에서 남은 과제입니다.',
     evidence: {
       label: '직접 기여한 PR',
       href: 'https://github.com/PetCare-Platform/petcoupon-backend/pulls?q=is%3Apr+is%3Amerged+author%3ACatverdose',
@@ -241,7 +321,7 @@ export const projects: Project[] = [
     ],
     github: 'https://github.com/Catverdose/concurrency-strategies',
     overview:
-      '같은 발급 흐름에서 재고 예약 전략만 바꿔 비교했습니다. 회원당 한 번의 요청에서 드러나지 않는 문제를 찾기 위해, 10,000명이 서로 다른 requestId로 세 번씩 요청하는 시나리오로 확장했습니다.',
+      '같은 발급 흐름에서 재고 예약 전략만 바꿔 9개를 비교했습니다. 10,000명이 서로 다른 requestId로 세 번씩 요청하자 1인 1매는 모든 전략이 지켰지만, 대상자 전원 발급·응답 분류·재고 원장까지 통과한 전략은 단일 인스턴스의 JVM_LOCK뿐이었습니다. 팀 실험에서 맡았던 Direct·Pessimistic 비교를 개인적으로 확장한 실험입니다.',
     cases: [
       {
         title: '최종 재고가 맞아도 정상 회원은 탈락할 수 있다',
@@ -251,6 +331,8 @@ export const projects: Project[] = [
           '초과 발급 여부뿐 아니라 대상자 전원 발급, 응답 분류, 재고 원장의 세 기준을 분리해 검사했습니다.',
         verification:
           'VU 50에서 DECR는 9,999명, LUA는 9,998명에게 발급됐습니다. 최종 원장은 일치했지만 정상 회원의 탈락을 확인했습니다.',
+        tradeoff:
+          '관찰된 원인은 중복 확인보다 재고 예약이 먼저 일어나는 순서입니다. 중복 확인과 예약을 하나의 Lua 실행으로 묶은 변형은 아직 측정하지 않았고, 다음 검증 과제로 남겼습니다.',
         evidence: [
           {
             label: '중복 회원 정순 실험 보고서',
@@ -295,9 +377,9 @@ export const projects: Project[] = [
     title: 'Vector DB Benchmark',
     kind: 'EXPERIMENT',
     tier: 'experiment',
-    typeLabel: 'UBot 팀 내 실험',
-    description: '같은 검색 품질, 같은 자원 조건에서의 비교',
-    role: 'Benchmark harness 구현 · 측정 설계',
+    typeLabel: 'UBot · 단독 수행',
+    description: '같은 검색 품질에서 비교하고, 운영 복잡도까지 따져 고르기',
+    role: 'Benchmark harness 설계 · 구현 · 측정 · 분석',
     technologies: ['pgvector', 'Qdrant', 'Milvus', 'Weaviate', 'OpenSearch'],
     highlights: [
       '5개 DB · 14개 구성 · 620 measurements',
@@ -305,8 +387,26 @@ export const projects: Project[] = [
     ],
     github: 'https://github.com/ureca-UBot/UBot-VertorDBTest',
     overview:
-      'RAG 서비스의 Vector DB 후보를 비교하는 harness입니다. 합성 10k chunk, BGE-M3 dense 1024d, cosine Top-10, 동시성 10 조건에서 DB별 4 vCPU·8 GiB를 고정했습니다. 5개 DB·14개 구성의 검색 설정 124개를 독립 재구축 5회, 총 620회 측정했습니다.',
+      'RAG 서비스의 Vector DB 후보를 비교하는 harness입니다. 합성 10k chunk, BGE-M3 dense 1024d, cosine Top-10, 동시성 10 조건에서 DB별 4 vCPU·8 GiB를 고정했습니다. 5개 DB·14개 구성의 검색 설정 124개를 독립 재구축 5회, 총 620회 측정했습니다. 성능은 Qdrant가 가장 좋았지만, 팀은 운영 복잡도를 줄이기 위해 이미 쓰고 있는 PostgreSQL의 pgvector를 선택했습니다.',
     cases: [
+      {
+        title: '가장 빠른 Qdrant 대신 pgvector를 고른 이유',
+        problem:
+          '같은 Recall에서 가장 빠른 DB는 Qdrant였습니다. 하지만 서비스는 이미 PostgreSQL을 쓰고 있어, 벡터 DB를 따로 두면 운영하고 데이터를 맞춰야 할 저장소가 하나 늘어납니다.',
+        decision:
+          '예상 규모(1천~1만 청크)에서 pgvector의 p95가 수십 ms 안에 머무는 것을 확인하고, 복잡성을 줄이기 위해 기존 PostgreSQL의 pgvector를 선택했습니다.',
+        verification:
+          'Recall 0.99 이상에서 Qdrant HNSW는 p95 4.1ms · 3,402 QPS, pgvector HNSW는 32.2ms · 1,601 QPS였습니다. Recall 0.95 이상에서는 3.9ms 대 7.3ms였습니다. 합성 1만 청크 · 동시성 10에서 5회 재구축한 중앙값입니다.',
+        tradeoff:
+          '같은 Recall에서 검색 지연은 Qdrant보다 2~8배 깁니다. 데이터가 커지거나 검색 지연이 응답 시간의 병목이 되면 다시 비교합니다.',
+        evidence: [
+          {
+            label: '124개 설정 수치 부록',
+            href: 'https://github.com/ureca-UBot/UBot-VertorDBTest/blob/dev/docs/07-results/assets/fairness-v2-20260912-1826/parameter-statistics.md',
+            detail: 'DB·인덱스·검색 설정별 Recall · p95 · QPS',
+          },
+        ],
+      },
       {
         title: '비교 전에 입력과 정답부터 고정',
         problem:
@@ -332,7 +432,7 @@ export const projects: Project[] = [
         decision:
           '원시 JSON·CSV와 워밍업 경고 170건을 보존했습니다. 보고서의 후보 해석에서는 합의되지 않은 Recall·p95·RAM 자동 탈락 기준을 적용하지 않았으며, 원시 판정과 코드 기본값은 보존했습니다.',
         verification:
-          'Milvus DISKANN은 5회 관찰에서 Recall 변동이 있었습니다. 실제 1k~10k chunk → pgvector baseline → 독립 holdout → 운영 복잡도 검토를 다음 검증 단계로 정의했습니다.',
+          'Milvus DISKANN은 5회 관찰에서 Recall 변동이 있었고, 원인을 확인하기 전까지 경고와 함께 결과에 남겼습니다. 검색 실패·응답 계약 위반·자원 수집 누락은 0건이었습니다.',
         evidence: [
           {
             label: '변동성·warning·해석 제한',
@@ -342,7 +442,7 @@ export const projects: Project[] = [
       },
     ],
     limitations:
-      '합성 10k·Top-10·동시성 10의 탐색 결과이며 제품 선택의 최종 근거가 아닙니다. Recall이 다른 구성을 속도만으로 줄 세우지 않았습니다.',
+      '합성 1만 청크 · Top-10 · 동시성 10 조건의 결과입니다. 실제 서비스 데이터와 1천 청크 규모는 측정하지 않았고, 실데이터에서 pgvector의 검색 품질을 확인하는 것이 다음 단계입니다.',
     proofs: [
       {
         label: '620회 측정 보고서',
@@ -359,8 +459,9 @@ export const projects: Project[] = [
     kind: 'TEAM',
     tier: 'supporting',
     typeLabel: '팀 프로젝트',
-    description: '통신사 고객 상담용 RAG 챗봇의 개발·테스트 기반',
-    role: '로컬·CI 환경 구성 · 테스트 격리 · 배포 이미지',
+    description: '통신사 고객 상담용 RAG 챗봇의 개발·테스트·배포 기반',
+    role: '로컬·CI 환경 · 테스트 격리 · 배포 이미지 · API 문서',
+    contribution: ['Merged PR 7개'],
     technologies: [
       'PostgreSQL',
       'PostGIS',
@@ -371,10 +472,11 @@ export const projects: Project[] = [
     highlights: [
       '로컬·CI가 같은 PostgreSQL 이미지 사용',
       '실제 vector 검색과 공간 함수를 CI에서 검증',
+      'Java 21 multi-stage 이미지 · 배포 Compose · Swagger',
     ],
     github: 'https://github.com/ureca-UBot/UBot-BE',
     overview:
-      'FAQ 벡터 검색과 LLM 답변, PostGIS 매장 근접 검색을 제공하는 서비스입니다. 핵심 기능이 PostgreSQL 확장에 의존하므로 팀 누구나 같은 환경에서 실행하고 검증하는 기반을 구성했습니다.',
+      'FAQ 벡터 검색과 LLM 답변, PostGIS 매장 근접 검색을 제공하는 서비스입니다. 핵심 기능이 PostgreSQL 확장에 의존하므로 팀 누구나 같은 환경에서 실행하고 검증하는 기반을 구성했습니다. 배포용 Docker 이미지와 Compose, Swagger API 문서까지 같은 구성으로 이어지게 맞췄습니다.',
     cases: [
       {
         title: '내 컴퓨터와 CI에서 같은 기능을 검증하기',
@@ -487,30 +589,41 @@ export const concurrencyResults = [
   ['REDIS_WATCH', '945', '전송 실패 27,000건', '일치', '실패'],
 ]
 
-export const stack = [
+// primary: 주력 (GitHub 프로필 README와 같은 기준), used: 프로젝트에서 사용한 경험
+export const stack: {
+  category: string
+  primary: string[]
+  used: string[]
+  context: string
+}[] = [
   {
     category: 'Backend',
-    technologies: 'Java 21 · Spring Boot · JPA · Go',
+    primary: ['Java 21', 'Spring Boot', 'JPA'],
+    used: ['Go', 'SSE'],
     context: '트랜잭션 경계와 도메인 규칙, 연결·트래픽 제어',
   },
   {
     category: 'Database',
-    technologies: 'PostgreSQL · MySQL · Redis · pgvector · PostGIS',
+    primary: ['PostgreSQL', 'MySQL'],
+    used: ['Redis', 'pgvector', 'PostGIS', 'Flyway'],
     context: 'DB 제약과 동시성 제어, 벡터·공간 검색',
   },
   {
     category: 'Infrastructure',
-    technologies: 'Docker · Testcontainers · GitHub Actions · Nginx · GCP',
+    primary: [],
+    used: ['Docker', 'Testcontainers', 'GitHub Actions', 'Nginx', 'GCP'],
     context: '로컬·CI 환경 일치, 컨테이너 배포와 GPU runtime',
   },
   {
     category: 'AI / RAG',
-    technologies: 'Ollama · bge-m3 · EXAONE · Vector Search',
+    primary: [],
+    used: ['Ollama', 'bge-m3', 'EXAONE', 'Vector Search'],
     context: '문서 색인, 근거 검색과 답변 생성의 상태 관리',
   },
   {
     category: 'Verification',
-    technologies: 'JUnit · k6 · Integration Test · Benchmark Harness',
+    primary: [],
+    used: ['JUnit', 'k6', 'Integration Test', 'Benchmark Harness'],
     context: '경합 재현, 회귀 검증과 공정한 비교 실험',
   },
 ]

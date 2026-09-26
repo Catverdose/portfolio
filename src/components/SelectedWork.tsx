@@ -1,6 +1,7 @@
 import { concurrencyResults, concurrencyRun, projects } from '../data/projects'
 import type { Project } from '../data/projects'
 import Architecture from './Architecture'
+import Contribution from './Contribution'
 import EvidenceLinks from './EvidenceLinks'
 import Icon from './Icon'
 import './selected-work.css'
@@ -157,6 +158,7 @@ function FeaturedProject({
           <p className="featured-role">
             <strong>담당</strong> {project.role}
           </p>
+          <Contribution project={project} />
           <ProjectActions project={project} onOpen={onOpen} primary />
         </div>
         {memory ? <Architecture /> : <MonitoringFlow />}
@@ -357,9 +359,20 @@ function ExperimentCard({
               </div>
             </li>
           </ol>
+          <div className="experiment-insight">
+            <Icon name="database" size={18} />
+            <div>
+              <strong>성능은 Qdrant, 선택은 pgvector.</strong>
+              <p>
+                Recall 0.99 이상에서 Qdrant가 p95 4.1ms로 가장 빨랐고 pgvector는
+                32.2ms였습니다. 예상 규모에서는 이 차이보다 벡터 DB를 하나 더
+                운영하는 부담이 크다고 보고, 이미 쓰는 PostgreSQL의 pgvector를
+                선택했습니다.
+              </p>
+            </div>
+          </div>
           <p className="experiment-caveat">
             프로젝트 페이지에서 124개 설정의 산포도를 직접 탐색할 수 있습니다.
-            합성 데이터의 탐색 결과이며 제품 선정 결론은 아닙니다.
           </p>
         </div>
       )}
@@ -469,6 +482,7 @@ export default function SelectedWork({
                 <h3>{project.title}</h3>
                 <p className="work-description">{project.description}</p>
                 <p className="project-role">{project.role}</p>
+                <Contribution project={project} />
                 <ul className="project-highlights">
                   {project.highlights.map((item) => (
                     <li key={item}>

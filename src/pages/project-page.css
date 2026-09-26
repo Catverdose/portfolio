@@ -82,10 +82,10 @@
   align-items: center;
   gap: 10px;
   min-height: 44px;
-  color: #333;
+  color: var(--text-strong);
 }
 .project-breadcrumb a:hover {
-  color: #0070f3;
+  color: var(--accent);
 }
 .project-page-header {
   display: grid;
@@ -111,7 +111,7 @@
   outline: none;
 }
 .project-page-description {
-  color: #626262;
+  color: var(--body);
   font-size: 1rem;
   line-height: 1.85;
   margin: 20px 0;
@@ -128,9 +128,12 @@
 .project-page-role p {
   margin: 15px 0;
   font-size: 0.8125rem;
-  color: #666;
+  color: var(--muted);
   line-height: 1.9;
   word-break: keep-all;
+}
+.project-page-role .contribution-list {
+  margin: 0 0 12px;
 }
 .project-page-role .text-link {
   font-size: 0.75rem;
@@ -145,7 +148,7 @@
 }
 .project-story {
   border-top: 1px solid var(--line);
-  background: #fff;
+  background: var(--surface);
   padding-top: 55px;
   padding-bottom: 40px;
 }
@@ -162,7 +165,7 @@
 .project-story-heading p {
   font-size: 0.9375rem;
   line-height: 2;
-  color: #666;
+  color: var(--muted);
   margin-top: 20px;
   word-break: keep-all;
 }
@@ -188,13 +191,13 @@
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  background: #fafafa;
+  background: var(--bg);
   border: 1px solid var(--line);
   border-radius: 7px;
   padding: 19px;
 }
 .page-related-projects a:hover {
-  border-color: #aaa;
+  border-color: var(--line-hover);
 }
 .page-related-projects strong {
   font-size: 0.875rem;
@@ -236,7 +239,7 @@
   padding: 35px;
   color: var(--muted);
   font-size: 0.875rem;
-  background: #fafafa;
+  background: var(--bg);
 }
 .load-error {
   flex-direction: column;
@@ -244,7 +247,7 @@
   border-radius: 10px;
 }
 .load-error strong {
-  color: #333;
+  color: var(--text-strong);
   font-weight: 500;
 }
 .route-not-found {

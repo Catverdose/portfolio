@@ -2,7 +2,7 @@
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 30px;
-  background: #fff;
+  background: var(--surface);
 }
 .design-heading {
   margin-bottom: 26px;
@@ -31,9 +31,9 @@
 }
 .design-node {
   padding: 19px 20px;
-  border: 1px solid #e3e3e3;
+  border: 1px solid var(--line);
   border-radius: 7px;
-  background: #fafafa;
+  background: var(--bg);
 }
 .design-node strong {
   display: block;
@@ -50,12 +50,12 @@
   word-break: keep-all;
 }
 .design-node.is-current {
-  border-color: #b6c8bf;
-  background: #f7faf8;
+  border-color: var(--success-line);
+  background: var(--success-bg);
 }
 .design-node.is-rejected {
-  border-color: #d8bcb4;
-  background: #fffaf8;
+  border-color: var(--danger-line);
+  background: var(--danger-bg);
 }
 .design-down {
   display: block;
@@ -74,25 +74,25 @@
 }
 .design-conclusion svg {
   margin-top: 3px;
-  color: #666;
+  color: var(--muted);
 }
 .design-conclusion p {
   font-size: 0.8125rem;
-  color: #666;
+  color: var(--muted);
   line-height: 1.9;
   word-break: keep-all;
 }
 .design-conclusion strong {
-  color: #333;
+  color: var(--text-strong);
   font-weight: 500;
 }
 .design-shared {
   max-width: 520px;
   margin: 0 auto;
   padding: 22px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--line-strong);
   border-radius: 7px;
-  background: #fafafa;
+  background: var(--bg);
   text-align: center;
 }
 .design-shared strong {
@@ -110,9 +110,9 @@
   height: 22px;
   width: 50%;
   margin: 22px auto 0;
-  border-top: 1px solid #ccc;
-  border-left: 1px solid #ccc;
-  border-right: 1px solid #ccc;
+  border-top: 1px solid var(--connector);
+  border-left: 1px solid var(--connector);
+  border-right: 1px solid var(--connector);
   position: relative;
 }
 .design-branch:before {
@@ -122,7 +122,7 @@
   width: 1px;
   top: -23px;
   left: 50%;
-  background: #ccc;
+  background: var(--connector);
 }
 .design-steps {
   list-style: none;
@@ -138,7 +138,7 @@
   padding: 20px;
   border: 1px solid var(--line);
   border-right: 0;
-  background: #fafafa;
+  background: var(--bg);
 }
 .design-steps li:first-child {
   border-radius: 7px 0 0 7px;
@@ -172,17 +172,17 @@
   padding: 12px 0 0;
   min-height: 44px;
   font-size: 0.75rem;
-  color: #555;
+  color: var(--body);
 }
 .design-source:hover {
-  color: #0070f3;
+  color: var(--accent);
 }
 .project-overview {
   max-width: 960px;
   padding-top: 0;
   padding-bottom: 36px;
   font-size: 0.9375rem;
-  color: #666;
+  color: var(--muted);
   line-height: 1.95;
   word-break: keep-all;
 }

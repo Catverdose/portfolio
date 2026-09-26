@@ -1,17 +1,17 @@
 .playground {
   margin: 36px 0;
   overflow: hidden;
-  border: 1px solid #dedede;
+  border: 1px solid var(--line-strong);
   border-radius: 12px;
-  background: #fff;
+  background: var(--surface);
 }
 .pg-topline {
   display: flex;
   justify-content: space-between;
   gap: 12px;
   padding: 12px 22px;
-  background: #171717;
-  color: #dedede;
+  background: var(--ink);
+  color: var(--on-ink-muted);
   font-family: var(--mono);
   font-size: 11px;
   letter-spacing: 0.07em;
@@ -25,7 +25,7 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #a1a1a1;
+  background: var(--on-ink-faint);
 }
 .pg-heading {
   padding: 26px 28px 20px;
@@ -61,17 +61,17 @@
 .pg-card {
   min-width: 0;
   padding: 20px;
-  border: 1px solid #e4e4e4;
+  border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fafafa;
+  background: var(--bg);
 }
 .pg-card.is-success {
-  border-color: #b7d4c5;
-  background: #f5faf7;
+  border-color: var(--success-line);
+  background: var(--success-bg);
 }
 .pg-card.is-warning {
-  border-color: #e6cba5;
-  background: #fffcf6;
+  border-color: var(--warning-line);
+  background: var(--warning-bg);
 }
 .pg-label {
   display: block;
@@ -84,7 +84,7 @@
 }
 .pg-detail {
   margin-top: 9px;
-  color: #626262;
+  color: var(--body);
   font-size: 12px;
   line-height: 1.8;
   word-break: keep-all;
@@ -97,27 +97,27 @@
 .pg-pill {
   display: inline-block;
   padding: 3px 7px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--line-strong);
   border-radius: 4px;
-  background: #fff;
-  color: #5b5b5b;
+  background: var(--surface);
+  color: var(--body);
   font-family: var(--mono);
   font-size: 11px;
   line-height: 1.7;
 }
 .pg-pill.success {
-  color: #176b46;
-  border-color: #bbd8c9;
-  background: #f3faf6;
+  color: var(--success);
+  border-color: var(--success-line);
+  background: var(--success-bg);
 }
 .pg-pill.warning {
-  color: #8e570f;
-  border-color: #e5cfad;
-  background: #fffaf0;
+  color: var(--warning);
+  border-color: var(--warning-line);
+  background: var(--warning-bg);
 }
 .pg-note {
   margin-top: 18px;
-  color: #666;
+  color: var(--muted);
   font-size: 12px;
   line-height: 1.9;
   word-break: keep-all;
@@ -131,7 +131,7 @@
 .pg-stat {
   min-width: 0;
   padding-top: 12px;
-  border-top: 1px solid #e4e4e4;
+  border-top: 1px solid var(--line);
 }
 .pg-stat dt {
   color: var(--muted);
@@ -152,8 +152,8 @@
   flex-wrap: wrap;
   gap: 12px;
   padding: 18px 28px;
-  border-top: 1px solid #e8e8e8;
-  border-bottom: 1px solid #e8e8e8;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
 }
 .pg-controls {
   display: flex;
@@ -165,10 +165,10 @@
 .pg-button {
   min-height: 38px;
   padding: 8px 13px;
-  border: 1px solid #dadada;
+  border: 1px solid var(--line-strong);
   border-radius: 6px;
-  background: #fff;
-  color: #363636;
+  background: var(--surface);
+  color: var(--ink-hover);
   font-size: 12px;
   font-weight: 500;
   line-height: 1.6;
@@ -177,28 +177,28 @@
     border-color 0.15s;
 }
 .pg-button:hover:not(:disabled) {
-  background: #f1f1f1;
-  border-color: #aaa;
+  background: var(--fill-hover);
+  border-color: var(--line-hover);
 }
 .pg-button.primary {
-  border-color: #171717;
-  background: #171717;
-  color: #fff;
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--on-ink);
 }
 .pg-button.primary:hover:not(:disabled) {
-  background: #363636;
+  background: var(--ink-hover);
 }
 .pg-button:disabled {
-  border-color: #e8e8e8;
-  background: #f6f6f6;
-  color: #999;
+  border-color: var(--line);
+  background: var(--fill);
+  color: var(--faint);
 }
 .pg-reset {
   color: var(--muted);
 }
 .pg-footnote {
   padding: 14px 28px;
-  border-top: 1px solid #e8e8e8;
+  border-top: 1px solid var(--line);
   color: var(--muted);
   font-size: 12px;
   line-height: 1.9;
@@ -211,9 +211,9 @@
   gap: 16px;
   margin-bottom: 18px;
   padding: 16px 20px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--line-strong);
   border-radius: 8px;
-  background: #fafafa;
+  background: var(--bg);
 }
 .pg-producer strong {
   font-family: var(--mono);
@@ -234,7 +234,7 @@
   min-height: 40px;
   place-items: center;
   padding: 6px 3px;
-  border: 1px dashed #d8d8d8;
+  border: 1px dashed var(--line-strong);
   border-radius: 5px;
   color: var(--muted);
   font-family: var(--mono);
@@ -242,9 +242,9 @@
 }
 .pg-queue-slot.is-filled {
   border-style: solid;
-  border-color: #d2b78e;
-  background: #fff7e9;
-  color: #84571b;
+  border-color: var(--warning-strong);
+  background: var(--warning-bg);
+  color: var(--warning);
 }
 @media (max-width: 640px) {
   .playground {

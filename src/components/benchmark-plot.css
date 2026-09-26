@@ -1,7 +1,7 @@
 .benchmark-plot {
   width: 100%;
   min-width: 0;
-  color: var(--ink, #171717);
+  color: var(--ink);
 }
 
 .benchmark-toolbar {
@@ -25,7 +25,7 @@
 }
 
 .benchmark-count strong {
-  color: #171717;
+  color: var(--ink);
   font-weight: 600;
 }
 
@@ -33,9 +33,9 @@
   display: flex;
   gap: 2px;
   padding: 3px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--line);
   border-radius: 6px;
-  background: #fafafa;
+  background: var(--bg);
 }
 
 .benchmark-metric button,
@@ -50,9 +50,9 @@
 }
 
 .benchmark-metric button[aria-pressed='true'] {
-  color: #171717;
-  background: #fff;
-  box-shadow: 0 1px 3px #00000013;
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: var(--shadow-raised);
 }
 
 .benchmark-legend {
@@ -70,9 +70,9 @@
 }
 
 .benchmark-legend button[aria-pressed='true'] {
-  background: #f5f5f5;
-  border-color: #dedede;
-  color: #171717;
+  background: var(--fill);
+  border-color: var(--line-strong);
+  color: var(--ink);
 }
 
 .benchmark-swatch {
@@ -93,7 +93,7 @@
   overflow: visible;
 }
 .benchmark-grid line {
-  stroke: #eaeaea;
+  stroke: var(--line);
   stroke-width: 1;
 }
 .benchmark-grid text {
@@ -101,32 +101,32 @@
   font: 11px var(--mono, monospace);
 }
 .benchmark-grid .benchmark-axis-title {
-  fill: #5d5d5d;
+  fill: var(--body);
   font-size: 12px;
   font-family: inherit;
 }
 .benchmark-range line {
-  stroke: #171717;
+  stroke: var(--ink);
   stroke-width: 1;
 }
 .benchmark-point {
   cursor: pointer;
   opacity: 0.7;
-  stroke: #fff;
+  stroke: var(--surface);
   stroke-width: 0.7;
 }
 .benchmark-point:hover {
   opacity: 1;
-  stroke: #171717;
+  stroke: var(--ink);
   stroke-width: 1.5;
 }
 .benchmark-point.is-selected {
   opacity: 1;
-  stroke: #171717;
+  stroke: var(--ink);
   stroke-width: 1.8;
 }
 .benchmark-point:focus-visible {
-  outline: 2px solid #0070f3;
+  outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
 
@@ -138,16 +138,16 @@
 .benchmark-selection label {
   flex-shrink: 0;
   font-size: 12px;
-  color: #666;
+  color: var(--muted);
 }
 .benchmark-selection select {
   width: 100%;
   min-width: 0;
   padding: 9px 26px 9px 9px;
-  border: 1px solid #dedede;
+  border: 1px solid var(--line-strong);
   border-radius: 5px;
-  background: #fff;
-  color: #333;
+  background: var(--surface);
+  color: var(--text-strong);
   font-family: inherit;
   font-size: 12px;
   text-overflow: ellipsis;
@@ -156,8 +156,8 @@
 .benchmark-detail {
   margin: 10px 0 13px;
   padding: 12px;
-  background: #fafafa;
-  border: 1px solid #eee;
+  background: var(--bg);
+  border: 1px solid var(--line);
   border-radius: 5px;
 }
 
@@ -175,7 +175,7 @@
   display: block;
   margin-top: 2px;
   font: 12px var(--mono, monospace);
-  color: #222;
+  color: var(--text-strong);
 }
 .benchmark-values small {
   font: inherit;
@@ -202,13 +202,13 @@
   margin-top: 10px;
 }
 .benchmark-sources a {
-  color: #444;
+  color: var(--text-strong);
   text-decoration: underline;
-  text-decoration-color: #c7c7c7;
+  text-decoration-color: var(--connector);
   text-underline-offset: 3px;
 }
 .benchmark-sources a:hover {
-  color: #0070f3;
+  color: var(--accent);
 }
 .benchmark-sources span {
   color: var(--muted);

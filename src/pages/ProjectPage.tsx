@@ -5,6 +5,7 @@ import Icon from '../components/Icon'
 import EvidenceLinks from '../components/EvidenceLinks'
 import ProjectPlayground from '../components/ProjectPlayground'
 import ProjectDesign, { hasProjectDesign } from '../components/ProjectDesign'
+import Contribution from '../components/Contribution'
 
 export default function ProjectPage({ project }: { project: Project }) {
   const title = useRef<HTMLHeadingElement>(null)
@@ -39,6 +40,7 @@ export default function ProjectPage({ project }: { project: Project }) {
         <aside className="project-page-role">
           <span className="eyebrow">MY CONTRIBUTION</span>
           <p>{project.role}</p>
+          <Contribution project={project} />
           <a
             className="text-link"
             href={project.github}
