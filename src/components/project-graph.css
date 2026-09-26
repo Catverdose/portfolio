@@ -1,37 +1,42 @@
+/* Full-bleed band inside the page frame, like the other home sections */
 .project-map {
   width: 100%;
   min-width: 0;
   margin: 0 auto;
-  border: 1px solid #dedede;
-  border-radius: 14px;
+  border-top: 1px solid var(--line);
   background: #fff;
   overflow: hidden;
 }
+/* Horizontal padding comes from .section-inset so the band lines up
+   with the other sections. */
 .project-map-heading {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
   gap: 24px;
-  padding: 27px 30px 24px;
+  padding-top: 44px;
+  padding-bottom: 30px;
   border-bottom: 1px solid #e8e8e8;
 }
 .map-eyebrow {
   display: block;
   color: var(--muted);
-  font-size: 11px;
-  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
 }
 .project-map-heading h2 {
-  margin: 10px 0 7px;
-  font-size: 22px;
+  margin: 16px 0 0;
+  font-size: 1.9rem;
   font-weight: 550;
   letter-spacing: -0.055em;
+  word-break: keep-all;
 }
 .project-map-heading p {
-  margin: 0;
+  margin: 13px 0 0;
   color: var(--muted);
-  font-size: 13px;
-  line-height: 1.7;
+  font-size: 0.8125rem;
+  line-height: 1.9;
+  word-break: keep-all;
 }
 .map-viewport {
   position: relative;
@@ -238,7 +243,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  padding: 18px 27px;
+  padding-top: 18px;
+  padding-bottom: 18px;
   border-top: 1px solid #e8e8e8;
   background: #fff;
   color: var(--muted);
@@ -271,7 +277,8 @@
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
-    padding: 20px;
+    padding-top: 24px;
+    padding-bottom: 24px;
     background-color: #fcfcfc;
     background-image: radial-gradient(#d7d7d7 0.8px, transparent 0.8px);
     background-size: 20px 20px;
@@ -328,37 +335,40 @@
     outline-offset: 2px;
   }
 }
-@media (max-width: 760px) {
-  .project-map-heading {
-    padding: 20px;
-    gap: 18px;
-    align-items: flex-start;
-    flex-direction: column;
-  }
+@media (max-width: 899px) {
   .project-map-heading h2 {
-    font-size: 20px;
+    font-size: 1.75rem;
   }
-  .map-footer {
-    padding: 16px 20px;
-  }
+}
+@media (max-width: 760px) {
   .map-mobile-links {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-@media (max-width: 540px) {
-  .project-map {
-    border-radius: 10px;
-  }
+@media (max-width: 639px) {
   .project-map-heading {
-    padding: 18px 16px;
+    padding-top: 40px;
+    padding-bottom: 24px;
+  }
+  .project-map-heading h2 {
+    font-size: 1.5rem;
+    margin-top: 15px;
+    letter-spacing: -0.06em;
+  }
+  .project-map-heading p {
+    font-size: 0.75rem;
   }
   .map-footer {
-    padding: 15px 16px;
+    padding-top: 15px;
+    padding-bottom: 15px;
   }
+}
+@media (max-width: 540px) {
   .map-mobile-links {
     grid-template-columns: minmax(0, 1fr);
     gap: 10px;
-    padding: 16px;
+    padding-top: 16px;
+    padding-bottom: 16px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -15,6 +15,16 @@ const bottom = 210
 const left = 42
 const dbLabel = (id: BenchmarkDatabase) =>
   benchmarkDatabases.find((database) => database.id === id)!.label
+// Most settings sit above 0.95 Recall, where the full axis crowds them together.
+const recallRanges = {
+  all: { min: 0.3, ticks: [0.4, 0.6, 0.8, 1], narrowTicks: [0.4, 0.7, 1] },
+  high: {
+    min: 0.95,
+    ticks: [0.95, 0.96, 0.97, 0.98, 0.99, 1],
+    narrowTicks: [0.95, 0.975, 1],
+  },
+}
+const tickLabel = (tick: number) => (tick === 1 ? '1.0' : String(tick))
 
 export default function BenchmarkPlot() {
   const uid = useId()
@@ -23,16 +33,26 @@ export default function BenchmarkPlot() {
   const [width, setWidth] = useState(480)
   const [metric, setMetric] = useState<'p95' | 'qps'>('p95')
   const [database, setDatabase] = useState<BenchmarkDatabase | 'all'>('all')
+  const [range, setRange] = useState<keyof typeof recallRanges>('all')
   const [selectedId, setSelectedId] = useState(0)
+  const recallMin = recallRanges[range].min
   const visiblePoints = benchmarkPoints.filter(
     (point) => database === 'all' || point.database === database,
   )
+  const plottedPoints = visiblePoints.filter(
+    (point) => point.recall >= recallMin,
+  )
   const selected =
-    visiblePoints.find((point) => point.id === selectedId) ?? visiblePoints[0]
+    visiblePoints.find((point) => point.id === selectedId) ??
+    plottedPoints[0] ??
+    visiblePoints[0]
+  const selectedPlotted = selected.recall >= recallMin
+  // Roving tabindex target; the selection may be off-axis while zoomed.
+  const focusId = selectedPlotted ? selected.id : plottedPoints[0]?.id
   const color = (id: BenchmarkDatabase) =>
     benchmarkDatabases.find((item) => item.id === id)!.color
   const x = (recall: number) =>
-    left + ((recall - 0.3) / 0.7) * (width - left - 20)
+    left + ((recall - recallMin) / (1 - recallMin)) * (width - left - 20)
   const y = (value: number) =>
     bottom -
     (metric === 'p95'
@@ -41,7 +61,17 @@ export default function BenchmarkPlot() {
       (bottom - top)
   const yTicks =
     metric === 'p95' ? [3, 10, 30, 100] : [0, 1000, 2000, 3000, 4000]
-  const xTicks = width < 350 ? [0.4, 0.7, 1] : [0.4, 0.6, 0.8, 1]
+  const xTicks =
+    width < 350 ? recallRanges[range].narrowTicks : recallRanges[range].ticks
+
+  function changeRange(next: keyof typeof recallRanges) {
+    setRange(next)
+    const nextMin = recallRanges[next].min
+    if (selected.recall < nextMin) {
+      const first = visiblePoints.find((point) => point.recall >= nextMin)
+      if (first) setSelectedId(first.id)
+    }
+  }
 
   useEffect(() => {
     if (!frameRef.current) return
@@ -56,21 +86,21 @@ export default function BenchmarkPlot() {
     event: KeyboardEvent<SVGCircleElement>,
     currentId: number,
   ) {
-    const index = visiblePoints.findIndex((point) => point.id === currentId)
+    const index = plottedPoints.findIndex((point) => point.id === currentId)
     let nextIndex = index
     if (event.key === 'ArrowRight' || event.key === 'ArrowDown')
-      nextIndex = (index + 1) % visiblePoints.length
+      nextIndex = (index + 1) % plottedPoints.length
     else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp')
-      nextIndex = (index - 1 + visiblePoints.length) % visiblePoints.length
+      nextIndex = (index - 1 + plottedPoints.length) % plottedPoints.length
     else if (event.key === 'Home') nextIndex = 0
-    else if (event.key === 'End') nextIndex = visiblePoints.length - 1
+    else if (event.key === 'End') nextIndex = plottedPoints.length - 1
     else if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault()
       setSelectedId(currentId)
       return
     } else return
     event.preventDefault()
-    const next = visiblePoints[nextIndex]
+    const next = plottedPoints[nextIndex]
     setSelectedId(next.id)
     pointRefs.current[next.id]?.focus()
   }
@@ -79,27 +109,56 @@ export default function BenchmarkPlot() {
     <div className="benchmark-plot">
       <div className="benchmark-toolbar">
         <p className="benchmark-count">
-          <strong>{visiblePoints.length}</strong> / 124개 설정
+          <strong>{plottedPoints.length}</strong> / 124개 설정
+          {plottedPoints.length < visiblePoints.length && (
+            <span>
+              {' '}
+              · Recall {recallMin} 미만{' '}
+              {visiblePoints.length - plottedPoints.length}개 제외
+            </span>
+          )}
         </p>
-        <div
-          className="benchmark-metric"
-          role="group"
-          aria-label="산포도 세로축"
-        >
-          <button
-            type="button"
-            aria-pressed={metric === 'p95'}
-            onClick={() => setMetric('p95')}
+        <div className="benchmark-controls">
+          <div
+            className="benchmark-metric"
+            role="group"
+            aria-label="Recall 범위"
           >
-            p95 지연
-          </button>
-          <button
-            type="button"
-            aria-pressed={metric === 'qps'}
-            onClick={() => setMetric('qps')}
+            <button
+              type="button"
+              aria-pressed={range === 'all'}
+              onClick={() => changeRange('all')}
+            >
+              전체 범위
+            </button>
+            <button
+              type="button"
+              aria-pressed={range === 'high'}
+              onClick={() => changeRange('high')}
+            >
+              0.95–1.0 확대
+            </button>
+          </div>
+          <div
+            className="benchmark-metric"
+            role="group"
+            aria-label="산포도 세로축"
           >
-            QPS
-          </button>
+            <button
+              type="button"
+              aria-pressed={metric === 'p95'}
+              onClick={() => setMetric('p95')}
+            >
+              p95 지연
+            </button>
+            <button
+              type="button"
+              aria-pressed={metric === 'qps'}
+              onClick={() => setMetric('qps')}
+            >
+              QPS
+            </button>
+          </div>
         </div>
       </div>
       <div
@@ -155,7 +214,7 @@ export default function BenchmarkPlot() {
               <g key={tick}>
                 <line x1={x(tick)} x2={x(tick)} y1={top} y2={bottom} />
                 <text x={x(tick)} y={bottom + 17} textAnchor="middle">
-                  {tick.toFixed(1)}
+                  {tickLabel(tick)}
                 </text>
               </g>
             ))}
@@ -170,34 +229,38 @@ export default function BenchmarkPlot() {
               textAnchor="middle"
               className="benchmark-axis-title"
             >
-              혼합 Recall@10 →
+              혼합 Recall@10 {range === 'high' ? '· 0.95–1.0 확대 ' : ''}→
             </text>
           </g>
-          <g className="benchmark-range" aria-hidden="true">
-            <line
-              x1={x(selected.recallMin)}
-              x2={x(selected.recallMax)}
-              y1={y(selected[metric])}
-              y2={y(selected[metric])}
-            />
-            {[selected.recallMin, selected.recallMax].map((value, index) => (
+          {selectedPlotted && (
+            <g className="benchmark-range" aria-hidden="true">
               <line
-                key={index}
-                x1={x(value)}
-                x2={x(value)}
-                y1={y(selected[metric]) - 4}
-                y2={y(selected[metric]) + 4}
+                x1={x(Math.max(selected.recallMin, recallMin))}
+                x2={x(selected.recallMax)}
+                y1={y(selected[metric])}
+                y2={y(selected[metric])}
               />
-            ))}
-          </g>
-          {visiblePoints.map((point) => (
+              {[selected.recallMin, selected.recallMax]
+                .filter((value) => value >= recallMin)
+                .map((value, index) => (
+                  <line
+                    key={index}
+                    x1={x(value)}
+                    x2={x(value)}
+                    y1={y(selected[metric]) - 4}
+                    y2={y(selected[metric]) + 4}
+                  />
+                ))}
+            </g>
+          )}
+          {plottedPoints.map((point) => (
             <circle
               key={point.id}
               ref={(element) => {
                 pointRefs.current[point.id] = element
               }}
               role="button"
-              tabIndex={selected.id === point.id ? 0 : -1}
+              tabIndex={focusId === point.id ? 0 : -1}
               aria-pressed={selected.id === point.id}
               aria-label={`${dbLabel(point.database)}, ${point.configuration}, ${point.parameter}, Recall ${point.recall.toFixed(6)}, p95 ${point.p95}밀리초, QPS ${point.qps}`}
               cx={x(point.recall)}

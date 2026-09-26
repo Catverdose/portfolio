@@ -68,7 +68,7 @@ export default function HeroVisual({
       className="project-map"
       aria-labelledby="project-map-title"
     >
-      <div className="project-map-heading">
+      <div className="project-map-heading section-inset">
         <div>
           <span className="map-eyebrow mono">CONNECTED WORK / 06 PROJECTS</span>
           <h2 id="project-map-title">문제에서 프로젝트로.</h2>
@@ -173,7 +173,10 @@ export default function HeroVisual({
           </span>
         </div>
       </div>
-      <nav className="map-mobile-links" aria-label="프로젝트 바로 가기">
+      <nav
+        className="map-mobile-links section-inset"
+        aria-label="프로젝트 바로 가기"
+      >
         {graphNodes.map((node) => (
           <a
             key={node.id}
@@ -192,7 +195,7 @@ export default function HeroVisual({
           </a>
         ))}
       </nav>
-      <div className="map-footer">
+      <div className="map-footer section-inset">
         <span>서비스의 문제를 실험으로 검증하고, 다음 설계에 반영했습니다.</span>
         <span className="map-legend">
           <i aria-hidden="true" />

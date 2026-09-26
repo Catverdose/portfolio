@@ -10,23 +10,62 @@
 .hero-map-intro .hero-footnote {
   margin-top: 36px;
 }
-.hero-map-note {
+.hero-proofs {
   align-self: center;
   border-left: 1px solid var(--line);
-  padding: 26px 0 26px 36px;
+  padding: 6px 0 6px 36px;
 }
-.hero-map-note .eyebrow {
+.hero-proofs .eyebrow {
   font-size: 0.6875rem;
 }
-.hero-map-note p {
-  font-size: 0.9375rem;
-  line-height: 1.9;
-  color: #666;
-  margin: 20px 0;
+.hero-proofs ul {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+}
+.hero-proofs li + li {
+  border-top: 1px solid var(--line);
+}
+.hero-proofs a {
+  display: grid;
+  gap: 5px;
+  padding: 16px 0;
+}
+.hero-proofs strong {
+  font-size: 1.75rem;
+  font-weight: 550;
+  line-height: 1.2;
+  letter-spacing: -0.05em;
+}
+.hero-proofs small {
+  margin-left: 2px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--body);
+}
+.hero-proofs a > span:not(.hero-proof-project) {
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  color: var(--body);
   word-break: keep-all;
 }
-.hero-map-note .text-link {
-  font-size: 0.8125rem;
+.hero-proof-project {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.6875rem;
+  color: var(--muted);
+}
+.hero-proof-project svg {
+  transition: transform 150ms;
+}
+.hero-proofs a:hover .hero-proof-project {
+  color: var(--ink);
+}
+.hero-proofs a:hover .hero-proof-project svg {
+  transform: translateX(3px);
 }
 .project-breadcrumb {
   display: flex;
@@ -110,10 +149,9 @@
   padding-top: 55px;
   padding-bottom: 40px;
 }
+/* Reading width only; the left edge stays on the header's column. */
 .project-story > * {
   max-width: 860px;
-  margin-left: auto;
-  margin-right: auto;
 }
 .project-story-heading h2 {
   font-size: 1.875rem;
@@ -253,8 +291,18 @@
     grid-template-columns: 1fr;
     gap: 0;
   }
-  .hero-map-note {
-    display: none;
+  .hero-proofs {
+    margin-top: 44px;
+    padding: 0;
+    border-left: 0;
+  }
+  .hero-proofs ul {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0 24px;
+    border-top: 1px solid var(--line);
+  }
+  .hero-proofs li + li {
+    border-top: 0;
   }
   .project-page-header {
     grid-template-columns: 1fr;
@@ -272,6 +320,21 @@
   .hero.hero-map-intro {
     padding-top: 48px;
     padding-bottom: 22px;
+  }
+  .hero-proofs {
+    margin-top: 36px;
+  }
+  .hero-proofs ul {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .hero-proofs li + li {
+    border-top: 1px solid var(--line);
+  }
+  .hero-proofs a {
+    padding: 14px 0;
+  }
+  .hero-proofs strong {
+    font-size: 1.5rem;
   }
   .project-breadcrumb {
     min-height: 60px;

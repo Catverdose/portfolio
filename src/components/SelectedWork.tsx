@@ -5,17 +5,21 @@ import EvidenceLinks from './EvidenceLinks'
 import Icon from './Icon'
 import './selected-work.css'
 
+// Only the featured cases get the filled button so the primary action
+// on the page stays distinct.
 function ProjectActions({
   project,
   onOpen,
+  primary = false,
 }: {
   project: Project
   onOpen: (project: Project) => void
+  primary?: boolean
 }) {
   return (
     <div className="work-actions">
       <button
-        className="button button-primary"
+        className={`button ${primary ? 'button-primary' : 'button-secondary'}`}
         onClick={() => onOpen(project)}
         aria-label={`${project.title} 상세 보기`}
       >
@@ -153,7 +157,7 @@ function FeaturedProject({
           <p className="featured-role">
             <strong>담당</strong> {project.role}
           </p>
-          <ProjectActions project={project} onOpen={onOpen} />
+          <ProjectActions project={project} onOpen={onOpen} primary />
         </div>
         {memory ? <Architecture /> : <MonitoringFlow />}
       </div>
@@ -191,12 +195,14 @@ function FeaturedProject({
                 0 <small>건</small>
               </strong>
               <span>초과·중복 발급</span>
+              <em className="metric-status is-met">정합성 목표 충족</em>
             </div>
             <div>
               <strong>
                 16.31 <small>초</small>
               </strong>
-              <span>접수 응답 p95 평균 · 목표 미달</span>
+              <span>접수 응답 p95 평균</span>
+              <em className="metric-status is-missed">목표 0.5초 · 미달</em>
             </div>
             <div>
               <strong>
@@ -253,14 +259,6 @@ function ExperimentCard({
       </p>
       {concurrency ? (
         <div className="concurrency-preview">
-          <div className="experiment-conditions">
-            <span className="mono">RUN r0816dup1 · VU 50</span>
-            <p>
-              회원 10,000명 × 3회 요청
-              <br />
-              재고 10,000개 · 로컬 단일 호스트
-            </p>
-          </div>
           <div
             className="table-scroll"
             tabIndex={0}
@@ -268,7 +266,11 @@ function ExperimentCard({
             aria-label="동시성 실험 발급 대상자 요약표"
           >
             <table>
-              <caption>9개 전략 중 5개 요약 · 정순 실행</caption>
+              <caption>
+                <span className="mono">RUN r0816dup1 · VU 50 · 정순 실행</span>
+                회원 10,000명 × 3회 요청 · 재고 10,000개 · 로컬 단일 호스트 ·
+                9개 전략 중 5개
+              </caption>
               <thead>
                 <tr>
                   <th scope="col">전략</th>
@@ -306,11 +308,14 @@ function ExperimentCard({
               </p>
             </div>
           </div>
-          <p className="experiment-caveat">
-            JVM_LOCK의 통과는 단일 인스턴스 조건입니다. 조건별 1회 실행과 역순
-            재실행으로 성능 순위를 확정하지 않았습니다.
-          </p>
-          <p className="experiment-caveat">{concurrencyRun.note}</p>
+          <details className="experiment-notes">
+            <summary>실험 조건과 한계 2가지</summary>
+            <p className="experiment-caveat">
+              JVM_LOCK의 통과는 단일 인스턴스 조건입니다. 조건별 1회 실행과 역순
+              재실행으로 성능 순위를 확정하지 않았습니다.
+            </p>
+            <p className="experiment-caveat">{concurrencyRun.note}</p>
+          </details>
         </div>
       ) : (
         <div className="benchmark-preview">

@@ -1,31 +1,65 @@
-import { profile, stack } from '../data/projects'
+import { profile, projects, stack } from '../data/projects'
 import type { Project } from '../data/projects'
 import Icon from '../components/Icon'
 import type { IconName } from '../components/Icon'
 import HeroVisual from '../components/HeroVisual'
 import SelectedWork from '../components/SelectedWork'
-const focusAreas: { title: string; description: string; icon: IconName }[] = [
+const focusAreas: {
+  title: string
+  description: string
+  icon: IconName
+  projectIds: string[]
+}[] = [
   {
     title: 'Data Consistency',
     description: '트랜잭션 경계 · DB 제약 · 동시성 제어',
     icon: 'database',
+    projectIds: ['engineering-memory', 'concurrency'],
   },
   {
     title: 'Failure Handling',
     description: '비동기 처리 · 장애 복구 · SSE',
     icon: 'activity',
+    projectIds: ['engineering-memory', 'petcoupon'],
   },
   {
     title: 'Verification',
     description: '재현 가능한 테스트 · 측정 · 벤치마크',
     icon: 'shield',
+    projectIds: ['concurrency', 'vector-db-benchmark'],
   },
   {
     title: 'Backend Infrastructure',
     description: 'Docker · CI/CD · 관측 가능성',
     icon: 'layers',
+    projectIds: ['ubot', 'engineering-memory'],
   },
 ]
+
+// Figures from personal work only; team results stay in their project cards.
+const heroProofs = [
+  {
+    projectId: 'engineering-memory',
+    value: '3개',
+    unit: '경계',
+    label: '색인 덮어쓰기 · 장애 복구 · 사용자 격리를 테스트로 고정',
+  },
+  {
+    projectId: 'concurrency',
+    value: '9개',
+    unit: '전략',
+    label: '동시성 제어를 같은 조건에서 비교하고 원시 결과 공개',
+  },
+  {
+    projectId: 'vector-db-benchmark',
+    value: '620회',
+    unit: '측정',
+    label: 'Vector DB 5종을 같은 자원·정답 기준으로 측정',
+  },
+]
+
+const projectTitle = (id: string) =>
+  projects.find((project) => project.id === id)?.title ?? id
 
 export default function HomePage({
   onOpen,
@@ -74,22 +108,29 @@ export default function HomePage({
             <Icon name="external" size={13} />
           </a>
         </div>
-        <div className="hero-map-note">
-          <span className="eyebrow">EXPLORE / UNDERSTAND / VERIFY</span>
-          <p>
-            프로젝트의 연결을 따라가고,
-            <br />
-            설계와 검증의 근거를 확인해 보세요.
-          </p>
-          <a className="text-link" href="#project-map">
-            프로젝트 맵 탐색 <Icon name="arrow" size={16} />
-          </a>
-        </div>
+        <aside className="hero-proofs" aria-labelledby="hero-proofs-title">
+          <span id="hero-proofs-title" className="eyebrow">
+            MEASURED, NOT ASSUMED
+          </span>
+          <ul>
+            {heroProofs.map((proof) => (
+              <li key={proof.projectId}>
+                <a href={`#/projects/${proof.projectId}`}>
+                  <strong>
+                    {proof.value} <small>{proof.unit}</small>
+                  </strong>
+                  <span>{proof.label}</span>
+                  <span className="hero-proof-project mono">
+                    {projectTitle(proof.projectId)}
+                    <Icon name="arrow" size={13} />
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </aside>
         <div className="hero-footnote mono">
           <span>JAVA · SPRING BOOT · BACKEND ENGINEERING</span>
-          <a href="#projects">
-            EXPLORE THE WORK <span aria-hidden="true">↓</span>
-          </a>
         </div>
       </section>
 
@@ -97,19 +138,41 @@ export default function HomePage({
 
       <section
         id="about"
-        className="focus-section"
-        aria-label="개발자로서 집중하는 네 가지 영역"
+        className="about-section"
+        aria-labelledby="about-title"
       >
-        {focusAreas.map((area, index) => (
-          <div className="focus-item" key={area.title}>
-            <div className="focus-top">
-              <Icon name={area.icon} size={20} />
-              <span className="mono">0{index + 1}</span>
+        <div className="about-heading section-inset">
+          <div className="section-heading">
+            <div>
+              <div className="eyebrow">ABOUT / FOCUS</div>
+              <h2 id="about-title">개발자로서 집중하는 네 가지.</h2>
+              <p>
+                Java · Spring Boot 백엔드 개발자입니다. 데이터 흐름을 이해하고,
+                안정적인 서비스 개발과 문제 해결에 관심이 있습니다.
+              </p>
             </div>
-            <h2>{area.title}</h2>
-            <p>{area.description}</p>
           </div>
-        ))}
+        </div>
+        <div className="focus-section">
+          {focusAreas.map((area, index) => (
+            <div className="focus-item" key={area.title}>
+              <div className="focus-top">
+                <Icon name={area.icon} size={20} />
+                <span className="mono">0{index + 1}</span>
+              </div>
+              <h3>{area.title}</h3>
+              <p>{area.description}</p>
+              <p className="focus-projects">
+                <span>근거</span>
+                {area.projectIds.map((id) => (
+                  <a key={id} href={`#/projects/${id}`}>
+                    {projectTitle(id)}
+                  </a>
+                ))}
+              </p>
+            </div>
+          ))}
+        </div>
       </section>
 
       <SelectedWork onOpen={onOpen} />
