@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
-import type { Project } from '../data/projects'
+import type { ComponentType, ReactNode } from 'react'
+import type { Feature, Project } from '../data/projects'
 import {
   concurrencyResults,
   concurrencyRun,
@@ -12,9 +13,29 @@ import EvidenceLinks from '../components/EvidenceLinks'
 import ProjectPlayground from '../components/ProjectPlayground'
 import ProjectDesign, { hasProjectDesign } from '../components/ProjectDesign'
 import Contribution from '../components/Contribution'
+import Architecture from '../components/Architecture'
+import {
+  ChatPipeline,
+  MonitoringFlow,
+  TeamMeasurement,
+} from '../components/ProjectFigures'
 
 const hasPlayground = (id: string) =>
   id === 'petcoupon' || id === 'vector-db-benchmark'
+
+// 요약 옆에 두는 구조도
+const figures: Record<string, ComponentType> = {
+  ubot: ChatPipeline,
+  petcoupon: MonitoringFlow,
+  'engineering-memory': Architecture,
+}
+// 설계 그림이 설명하는 기능(features 배열의 순서). 그 기능을 펼치면 함께 보입니다.
+const designFeature: Record<string, number> = {
+  ubot: 4,
+  'engineering-memory': 0,
+}
+
+const pad = (value: number) => String(value).padStart(2, '0')
 
 function ResultTable({
   title,
@@ -79,8 +100,145 @@ function ResultTable({
   )
 }
 
+// 이 페이지 안에서 기능 카드로 내려가는 목차
+function FeatureIndex({ project }: { project: Project }) {
+  const label = project.tier === 'experiment' ? '확인한 것' : '맡은 일'
+  return (
+    <nav className="feature-index" aria-label="이 페이지의 내용">
+      <p className="eyebrow">
+        {label} {project.features.length}가지
+      </p>
+      <ol>
+        {project.features.map((feature, index) => (
+          <li key={feature.title}>
+            <button
+              type="button"
+              onClick={() =>
+                document
+                  .getElementById(`feature-${index + 1}`)
+                  ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }
+            >
+              <span className="mono">{pad(index + 1)}</span>
+              <span>{feature.title}</span>
+              <Icon name="arrow" size={14} />
+            </button>
+          </li>
+        ))}
+      </ol>
+    </nav>
+  )
+}
+
+// 요약(기획 한 줄, 개발 항목, 마무리 한 줄)을 먼저 보여 주고 전체 과정은 펼쳐서 봅니다.
+function FeatureCard({
+  feature,
+  index,
+  design,
+}: {
+  feature: Feature
+  index: number
+  design?: ReactNode
+}) {
+  const brief = feature.brief
+  return (
+    <article className="feature" id={`feature-${index + 1}`}>
+      <header>
+        <span className="eyebrow">FEATURE {pad(index + 1)}</span>
+        <h3>{feature.title}</h3>
+      </header>
+      <dl className="feature-steps">
+        <div>
+          <dt>
+            <span className="mono">01</span>기획
+          </dt>
+          <dd>{brief ? brief.plan : feature.plan}</dd>
+        </div>
+        <div>
+          <dt>
+            <span className="mono">02</span>개발
+          </dt>
+          <dd>
+            {brief ? (
+              <ul className="feature-points">
+                {brief.build.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            ) : (
+              feature.build
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt>
+            <span className="mono">03</span>마무리
+          </dt>
+          <dd>
+            {brief ? brief.outcome : feature.outcome}
+            {!brief && feature.limit && (
+              <span className="feature-limit">
+                <strong>남은 한계</strong>
+                {feature.limit}
+              </span>
+            )}
+          </dd>
+        </div>
+      </dl>
+      {brief && (
+        <details className="feature-more">
+          <summary>과정과 남은 한계 자세히</summary>
+          <div className="feature-full">
+            <p>
+              <strong>기획</strong>
+              {feature.plan}
+            </p>
+            <p>
+              <strong>개발</strong>
+              {feature.build}
+            </p>
+            <p>
+              <strong>마무리</strong>
+              {feature.outcome}
+            </p>
+            {feature.limit && (
+              <p className="feature-limit">
+                <strong>남은 한계</strong>
+                {feature.limit}
+              </p>
+            )}
+            {design}
+          </div>
+        </details>
+      )}
+      <EvidenceLinks links={feature.evidence} compact />
+    </article>
+  )
+}
+
 export default function ProjectPage({ project }: { project: Project }) {
   const title = useRef<HTMLHeadingElement>(null)
+  const parent =
+    project.tier === 'experiment'
+      ? { href: '#/experiments', label: '실험' }
+      : { href: '#/projects', label: '프로젝트' }
+  const Figure = figures[project.id]
+  const designIndex = designFeature[project.id]
+  // 설계 그림을 기능 안에서 보여 주는 프로젝트는 위쪽에 따로 두지 않습니다.
+  const showLab =
+    hasPlayground(project.id) ||
+    (hasProjectDesign(project.id) && designIndex === undefined)
+  // PetCoupon의 체험 화면은 첫 기능을 보여 주는 것이라 기능 목록 뒤에 둡니다.
+  const labAfterStory = project.id === 'petcoupon'
+  const lab = showLab ? (
+    <div className="project-lab-section">
+      {hasPlayground(project.id) ? (
+        <ProjectPlayground projectId={project.id} />
+      ) : (
+        <ProjectDesign project={project} />
+      )}
+    </div>
+  ) : null
   useEffect(() => {
     title.current?.focus({ preventScroll: true })
   }, [project.id])
@@ -88,8 +246,8 @@ export default function ProjectPage({ project }: { project: Project }) {
     <main id="main" className="page project-page">
       <div className="container">
         <nav className="project-breadcrumb" aria-label="현재 위치">
-          <a href="#project-map">
-            <span aria-hidden="true">←</span> 프로젝트 맵
+          <a href={parent.href}>
+            <span aria-hidden="true">←</span> {parent.label}
           </a>
           <span aria-hidden="true">/</span>
           <span aria-current="page">{project.title}</span>
@@ -127,17 +285,27 @@ export default function ProjectPage({ project }: { project: Project }) {
           </aside>
         </header>
 
-        <p className="project-overview">{project.overview}</p>
+        <div className={Figure ? 'project-intro has-figure' : 'project-intro'}>
+          <div className="project-intro-copy">
+            <p className="project-overview">{project.overview}</p>
+            {Figure && <FeatureIndex project={project} />}
+          </div>
+          {Figure ? (
+            <div className="project-figure">
+              <Figure />
+            </div>
+          ) : (
+            <FeatureIndex project={project} />
+          )}
+        </div>
 
-        {(hasPlayground(project.id) || hasProjectDesign(project.id)) && (
-          <div className="project-lab-section">
-            {hasProjectDesign(project.id) ? (
-              <ProjectDesign project={project} />
-            ) : (
-              <ProjectPlayground projectId={project.id} />
-            )}
+        {project.id === 'petcoupon' && (
+          <div className="project-figure is-wide">
+            <TeamMeasurement />
           </div>
         )}
+
+        {!labAfterStory && lab}
       </div>
 
       <section className="project-story" aria-labelledby="story-title">
@@ -146,8 +314,7 @@ export default function ProjectPage({ project }: { project: Project }) {
             <p className="eyebrow">PLAN → BUILD → RESULT</p>
             <h2 id="story-title">기획에서 마무리까지.</h2>
             <p className="section-lead">
-              맡은 기능마다 풀려던 문제, 실제로 만든 것, 결과와 남은 한계를
-              순서대로 적었습니다.
+              요약을 먼저 적었습니다. 과정과 남은 한계는 펼쳐서 볼 수 있습니다.
             </p>
           </header>
 
@@ -176,45 +343,20 @@ export default function ProjectPage({ project }: { project: Project }) {
 
           <div className="features">
             {project.features.map((feature, index) => (
-              <article className="feature" key={feature.title}>
-                <header>
-                  <span className="eyebrow">
-                    FEATURE {String(index + 1).padStart(2, '0')}
-                  </span>
-                  <h3>{feature.title}</h3>
-                </header>
-                <dl className="feature-steps">
-                  <div>
-                    <dt>
-                      <span className="mono">01</span>기획
-                    </dt>
-                    <dd>{feature.plan}</dd>
-                  </div>
-                  <div>
-                    <dt>
-                      <span className="mono">02</span>개발
-                    </dt>
-                    <dd>{feature.build}</dd>
-                  </div>
-                  <div>
-                    <dt>
-                      <span className="mono">03</span>마무리
-                    </dt>
-                    <dd>
-                      {feature.outcome}
-                      {feature.limit && (
-                        <span className="feature-limit">
-                          <strong>남은 한계</strong>
-                          {feature.limit}
-                        </span>
-                      )}
-                    </dd>
-                  </div>
-                </dl>
-                <EvidenceLinks links={feature.evidence} />
-              </article>
+              <FeatureCard
+                key={feature.title}
+                feature={feature}
+                index={index}
+                design={
+                  index === designIndex ? (
+                    <ProjectDesign project={project} />
+                  ) : undefined
+                }
+              />
             ))}
           </div>
+
+          {labAfterStory && lab}
 
           <aside className="limitations">
             <h3>조건과 남은 과제</h3>
@@ -246,8 +388,8 @@ export default function ProjectPage({ project }: { project: Project }) {
             </section>
           ) : null}
           <div className="project-page-footer">
-            <a className="text-link" href="#project-map">
-              ← 프로젝트 맵으로
+            <a className="text-link" href={parent.href}>
+              ← {parent.label} 목록으로
             </a>
             {project.live && (
               <a

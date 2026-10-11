@@ -9,6 +9,8 @@ export interface EvidenceLink {
 /** 기능 단위 기록. 기획 → 개발 → 마무리 순서로 읽습니다. */
 export interface Feature {
   title: string
+  /** 상세 페이지에서 먼저 보이는 요약. 전체 과정은 펼쳐야 보입니다. */
+  brief?: { plan: string; build: string[]; outcome: string }
   /** 기획: 풀어야 했던 문제와 어떻게 풀려고 했는지 */
   plan: string
   /** 개발: 실제로 만든 것과 그렇게 판단한 이유 */
@@ -50,7 +52,7 @@ export const profile = {
   github: 'https://github.com/Catverdose',
   email: 'eongpup@gmail.com',
   live: 'https://memory.catverdose.xyz',
-  // 2026-09-26 확인: ENOTFOUND. 도메인 연결을 확인한 뒤 true로 변경합니다.
+  // 도메인을 붙여 배포했다가 지금은 서버를 내려 둔 상태입니다. 다시 올리면 true로 변경합니다.
   liveAvailable: false,
 }
 
@@ -89,10 +91,19 @@ export const projects: Project[] = [
     ],
     github: ubotBe,
     overview:
-      'FAQ 벡터 검색과 LLM 답변, 매장 지도 검색을 제공하는 통신사 고객 상담 챗봇입니다. 프론트엔드 팀과 함께 만든 팀 프로젝트입니다. 저는 채팅 앞단의 입력 필터와 비회원 채팅, LLM과 임베딩 서버를 바꿔 끼우는 구조, 상품 관리 기능, 그리고 팀의 개발 환경과 배포를 맡았습니다. 회원 인증(JWT), FAQ 관리, 매장 지도 검색은 팀원이 담당했습니다.',
+      'FAQ 검색과 LLM 답변, 매장 지도를 제공하는 통신사 상담 챗봇이고 팀 프로젝트입니다. 저는 채팅 앞단, 모델 서버 전환 구조, 상품 관리, 개발 환경과 배포를 맡았습니다. 회원 인증(JWT), FAQ 관리, 매장 지도 검색은 팀원이 담당했습니다.',
     features: [
       {
         title: 'LLM을 부르기 전에 걸러야 하는 질문',
+        brief: {
+          plan: '금지어가 든 질문도 임베딩과 LLM 호출까지 그대로 가고 있어, 비용이 큰 호출 앞에서 먼저 거르기로 했습니다.',
+          build: [
+            '관리자 금지어 API 4개와 관리 화면',
+            '활성 금지어를 서버 메모리에 두고 커밋 뒤에 갱신',
+            '임베딩 전에 검사해 400으로 차단, 걸린 단어는 비공개',
+          ],
+          outcome: '백엔드 #104, 프론트 #23 병합. 당시 전체 테스트 379개 통과(PR 기록).',
+        },
         plan: '금지어가 든 질문도 임베딩, FAQ 검색, LLM 호출까지 그대로 진행되고 있었습니다. 금지어의 특성상 모델을 부를 필요가 없는 질문이 많을 것이라고 보고, 비용이 큰 호출 앞에서 먼저 거르기로 했습니다. 금지어가 Redis에 둘 만큼 많지는 않을 것이라 서버 메모리 캐시를 쓰기로 했습니다.',
         build:
           '관리자 금지어 API 4개(등록, 목록, 단어 수정, 상태 변경)를 만들고, 활성 금지어를 서버 시작 때 메모리에 올립니다. 캐시는 변경 트랜잭션이 커밋된 뒤에 새 목록으로 통째로 바꿔, 캐시와 DB가 어긋나지 않게 했습니다. 채팅에서는 임베딩 전에 금지어를 검사해 400으로 차단하고, 걸린 단어는 응답에 드러내지 않습니다. 관리자 동시 수정은 행 잠금으로 막았고, 단어와 상태는 바꾸려는 것만 수정하도록 엔드포인트를 나눴습니다. 프론트에는 금지어 관리 화면을 만들었습니다.',
@@ -114,6 +125,15 @@ export const projects: Project[] = [
       },
       {
         title: '로그인하지 않은 사용자에게 채팅을 열되, 횟수는 지키기',
+        brief: {
+          plan: 'JWT 로그인 없이도 채팅을 열되, LLM 비용 때문에 횟수는 제한해야 했습니다.',
+          build: [
+            '게스트는 HttpSession으로 구분, 기존 JWT 코드는 그대로',
+            '대화 행을 잠근 뒤 횟수를 세어 동시 요청도 상한 유지',
+            '오류와 재시도는 횟수에서 제외, Nginx에서 비로그인 요청만 속도 제한',
+          ],
+          outcome: '백엔드 #113 #131, 프론트 #27 #28 병합. 당시 전체 테스트 442개 통과(PR 기록).',
+        },
         plan: '로그인 인증은 JWT라 로그인하지 않은 사용자는 채팅을 쓸 수 없었습니다. 비회원에게도 열되 LLM 호출 비용 때문에 횟수는 제한해야 했습니다. 게스트는 JWT를 발급받지 않으므로 구분할 수단으로 HttpSession을 쓰고, 기존 JWT 인증 코드는 건드리지 않기로 했습니다.',
         build:
           '게스트 기능을 처음 쓸 때만 세션을 만들고 조회 때는 만들지 않습니다. 질문 횟수는 대화 행을 잠근 뒤 세어, 동시에 보낸 질문도 상한을 넘지 못하게 했습니다. 정상 답변과 FAQ 미발견만 횟수를 쓰고, 시스템 오류와 재시도는 서버가 책임질 일이라 횟수에서 뺐습니다. Nginx에는 Authorization 헤더가 없는 요청에만 IP 기준 속도 제한을 걸었습니다. 로그인하면 게스트 대화를 회원에게 넘기는 기능은 팀 회의에서 나온 아이디어를 구현한 것입니다.',
@@ -139,6 +159,15 @@ export const projects: Project[] = [
       },
       {
         title: '실험 결과를 코드로: 모델 서버 바꿔 끼우기',
+        brief: {
+          plan: '서빙 실험에서 vLLM이 기준선을 넘었지만 백엔드는 Ollama 호출에 묶여 있었습니다.',
+          build: [
+            '설정값으로 LLM과 임베딩 클라이언트 구현체를 선택',
+            '두 구현체가 같은 동작을 하는지 공통 계약 테스트로 확인',
+            '벡터를 모델별 Profile로 나눠 저장하고 빠진 벡터는 백필',
+          ],
+          outcome: '#138 #144 #146 #150 #153 병합. 전체 테스트는 534개에서 766개 통과로 늘었습니다(PR 기록).',
+        },
         plan: '서빙 실험에서 vLLM이 기준선을 넘었지만 백엔드는 Ollama 호출에 묶여 있었습니다. 임베딩 서버를 바꾸면 이미 저장된 벡터와 새 벡터가 섞이는 문제도 있었습니다. 기존 Ollama 경로는 그대로 두고 구현체를 하나 더 추가하는 방향으로 잡았습니다.',
         build:
           '먼저 채팅 서비스를 요청 검증, 비동기 실행, 답변 처리 세 클래스로 나눴습니다(#144). 그 위에 설정값으로 LLM 클라이언트 구현체를 고르는 구조를 만들고 OpenAI 호환 클라이언트(vLLM)를 추가했습니다. 두 구현체가 같은 동작을 하는지 확인하는 공통 계약 테스트를 두었습니다(일반 응답, 도구 실행과 호출 한도, 타임아웃, 연결 거부, 빈 응답). 임베딩도 같은 방식으로 분리했고, 응답 벡터가 1024차원이 아니면 저장하지 않습니다. 벡터는 임베딩 서버와 모델별 Profile로 나눠 저장하고 검색하며, 지금 Profile에 없는 벡터를 채우는 백필 API와 스크립트를 만들었습니다. 모델 서버는 .env의 AI_MODE 하나로 정합니다.',
@@ -168,13 +197,22 @@ export const projects: Project[] = [
       },
       {
         title: '재배포가 기존 서버를 깨지 않도록',
+        brief: {
+          plan: '8080을 노출하지 않고, 비밀값을 이미지에 넣지 않고, 재배포가 기존 컨테이너를 깨지 않아야 했습니다.',
+          build: [
+            'Java 21 멀티스테이지 이미지, 배포 Compose, Nginx 리버스 프록시',
+            'GitHub Actions 수동 CD: 빌드, EC2 전송, Nginx 경유 헬스체크',
+            '502 반복은 배포 전 점검 단계를 넣어 원인을 하나씩 분리',
+          ],
+          outcome: '#56 #58 #77 #88 병합. 수동 CD 성공과 /actuator/health UP을 PR에 기록했습니다.',
+        },
         plan: '백엔드를 EC2에 올려야 했습니다. 8080 포트를 직접 노출하지 않을 것, 비밀값을 이미지에 넣지 않을 것, 재배포가 기존 데이터와 컨테이너를 깨지 않을 것을 조건으로 잡았습니다. Docker 멀티스테이지 이미지, Nginx 리버스 프록시, GitHub Actions 수동 실행 배포로 구성하기로 했습니다.',
         build:
-          'Java 21 멀티스테이지 이미지와 배포용 Compose를 만들고, PostgreSQL과 모델 서버의 healthcheck 뒤에 백엔드가 뜨게 했습니다. Nginx는 80 포트에서 내부망의 백엔드로 넘깁니다. 워크플로는 이미지를 빌드해 커밋 SHA로 태그하고 EC2로 보낸 뒤 Compose를 교체하고, Nginx를 거친 헬스체크로 확인합니다. 첫 배포에서 502가 30번 넘게 났는데 원인이 하나가 아니었습니다. 배포 전 점검 단계를 넣어 SSH 키 문제를 찾았고, 에러 로그에서 고정 컨테이너 이름 충돌을 찾았습니다. 서비스끼리 서로를 찾지 못하는 부분은 Compose 프로젝트 이름을 통일하고, 백엔드를 바꾼 뒤 Nginx를 다시 만들도록 순서를 고쳤습니다.',
+          'Java 21 멀티스테이지 이미지와 배포용 Compose를 만들고, PostgreSQL과 모델 서버의 healthcheck 뒤에 백엔드가 뜨게 했습니다. Nginx는 80 포트에서 내부망의 백엔드로 넘깁니다. 워크플로는 이미지를 빌드해 커밋 SHA로 태그하고 EC2로 보낸 뒤 Compose를 교체하고, Nginx를 거친 헬스체크로 확인합니다. 수동 CD로 배포하자 502가 30번 넘게 났는데 원인이 하나가 아니었습니다. 배포 전 점검 단계를 넣어 SSH 키 문제를 찾았고, 에러 로그에서 고정 컨테이너 이름 충돌을 찾았습니다. 서비스끼리 서로를 찾지 못하는 부분은 Compose 프로젝트 이름을 통일하고, 백엔드를 바꾼 뒤 Nginx를 다시 만들도록 순서를 고쳤습니다.',
         outcome:
           '#56, #58, #77, #88이 병합됐고 PR에 수동 CD 성공, /actuator/health UP, 8080 외부 접근 불가 확인을 기록했습니다. 점검 단계와 Nginx 경유 헬스체크는 재발 방지용으로 워크플로에 남겼습니다. 이후 Redis와 Prometheus 수집 기반(#120), LLM 서빙 테스트용 GPU 서버를 필요할 때 만들고 지우는 Terraform 구성(#133)을 더했습니다.',
         limit:
-          '수동 실행 배포이고 HTTPS와 무중단 전환은 후속 과제입니다. #120은 수집 기반까지이며 캐시 로직이나 대시보드는 만들지 않았습니다.',
+          '수동 실행 배포이고 HTTPS와 서버 자동 시작·중지는 후속 과제입니다. #120은 수집 기반까지이며 캐시 로직이나 대시보드는 만들지 않았습니다.',
         evidence: [
           {
             label: 'Nginx Reverse Proxy와 수동 CD (#77)',
@@ -194,6 +232,15 @@ export const projects: Project[] = [
       },
       {
         title: '내 컴퓨터와 CI에서 같은 기능을 검증하기',
+        brief: {
+          plan: 'pgvector와 PostGIS 확장 버전이 PC마다 다르면 특정 환경에서만 실패합니다.',
+          build: [
+            '로컬 Compose와 Testcontainers가 같은 DB Dockerfile 사용',
+            'PostgreSQL 18, pgvector, PostGIS 버전 고정, 확장 생성은 Flyway',
+            '프론트는 package-lock 커밋으로 같은 버전에서 시작',
+          ],
+          outcome: '백엔드 #3 #10, 프론트 #2 병합. CI에서 실제 vector 검색과 PostGIS 함수를 실행합니다.',
+        },
         plan: 'UBot은 PostgreSQL의 pgvector와 PostGIS 확장에 의존합니다. 개발자마다 확장 버전이 다르면 특정 PC에서만 실패하고, 다른 DB로 대체하면 확장 함수의 실제 동작을 검증할 수 없습니다. 로컬과 CI가 같은 DB 정의를 쓰게 하기로 했습니다.',
         build:
           '로컬 Compose와 Testcontainers가 같은 PostgreSQL Dockerfile을 사용합니다. PostgreSQL 18, pgvector 0.8.6, PostGIS 3.6.4로 버전을 고정하고 확장 생성은 Flyway로 통일했습니다. 테스트는 매번 독립 DB를 띄우고 개발 DB로 넘어가지 않게 막았습니다. 프론트도 초기 환경을 잡고 package-lock을 커밋해 팀이 같은 버전으로 시작하게 했습니다.',
@@ -215,6 +262,15 @@ export const projects: Project[] = [
       },
       {
         title: '상품 4종 관리 API와 화면',
+        brief: {
+          plan: '챗봇이 안내할 통신 상품 4종의 데이터와 관리 기능이 없었습니다.',
+          build: [
+            '요금제, 결합상품, 부가서비스, 로밍 CRUD',
+            '조회는 누구나, 변경은 관리자만, 삭제는 소프트 삭제',
+            '동시 수정은 행 잠금과 바뀐 컬럼만 수정으로 처리',
+          ],
+          outcome: '백엔드 #157, 프론트 #36 병합. CRUD·권한 테스트 34개, 동시성 테스트 12개 통과(PR 기록).',
+        },
         plan: '챗봇이 안내할 통신 상품(요금제, 결합상품, 부가서비스, 로밍) 데이터와 관리 기능이 없었습니다. 비회원도 볼 수 있는 조회와 관리자만 할 수 있는 변경을 나눠야 했습니다.',
         build:
           '상품 4종의 CRUD를 만들었습니다. 활성이고 삭제되지 않은 상품은 누구나 조회할 수 있고, 생성과 수정, 상태 변경, 삭제는 관리자만 할 수 있습니다. 삭제는 소프트 삭제이고, 수정과 상태 변경, 삭제는 금지어 관리와 같은 방식(행 잠금, 바뀐 컬럼만 수정)으로 동시 요청을 처리합니다. 프론트의 관리자 화면은 네 종류가 목록, 표, 모달을 함께 쓰고 종류마다 다른 부분만 따로 두었습니다.',
@@ -278,10 +334,19 @@ export const projects: Project[] = [
     ],
     github: petcoupon,
     overview:
-      '대량 요청에서도 초과 발급 없이 사용자당 한 장을 발급하는 팀 프로젝트입니다. Redis·Kafka 발급 파이프라인은 팀원이 담당했고, 저는 이벤트·쿠폰 관리와 관리자 운영·모니터링을 맡았습니다. 팀 부하 테스트는 AWS EC2 3대, 20,000 VU, 쿠폰 재고 10,000개 조건에서 수행했습니다. 반복 실행 2~5회의 접수 처리량 평균은 1,030 TPS, 접수 응답 p95 평균은 16.31초로 지연 목표에 미달했습니다. 202 접수 이후 비동기로 발급을 확정하며, DB 확정 완료 시간의 회차 평균은 220.5초였습니다.',
+      '대량 요청에서도 초과 발급 없이 사용자당 한 장을 발급하는 팀 프로젝트입니다. 저는 이벤트·쿠폰 관리와 관리자 운영, 모니터링을 맡았고 Redis·Kafka 발급 파이프라인은 팀원이 담당했습니다.',
     features: [
       {
         title: '로그 하나를 보냈는데 같은 로그가 계속 왔다',
+        brief: {
+          plan: '관리자가 경고와 오류 로그를 실시간으로 보는 SSE 모니터링을 맡았습니다.',
+          build: [
+            '증상: 테스트 로그 하나가 계속 반복되고 화면이 느려짐',
+            '원인: 큐가 차면 낸 오류 로그를 모니터링이 다시 수집',
+            '해결: 큐 1,000 → 50, 가득 차면 오래된 로그를 버리고 개수만 통지',
+          ],
+          outcome: '#179 #192 병합. 로컬에서 연결을 62번 끊어도 같은 예외 0건(PR 기록).',
+        },
         plan: '관리자가 서버 경고와 오류 로그를 실시간으로 보는 모니터링을 맡았습니다. Logback appender에서 마스킹을 거쳐 SSE로 보내고, 구독자마다 큐를 따로 두어 느린 구독자 한 명이 다른 구독자와 로그를 쓰는 요청을 늦추지 않게 하려 했습니다.',
         build:
           '프론트와 처음 연결해 테스트 로그를 하나 보냈더니 같은 로그만 계속 오고 화면이 크게 느려졌습니다. 500 에러를 일부러 내며 콘솔 로그를 따라가 보니, 연결이 끊긴 뒤 큐가 차면 오류를 냈고 그 오류 로그를 모니터링이 다시 수집하면서 스스로 불어나고 있었습니다. 먼저 구독자별 큐를 1,000개에서 50개로 줄였습니다. 큐가 작아지니 가득 찰 때의 처리가 중요해져, 오류 대신 오래된 로그를 버리고 버린 개수만 알리게 바꿨습니다. 모니터링 자신의 로그는 다시 수집하지 않게 막고, 큐 앞에 경고와 오류만 통과시키는 게이트를 두었습니다.',
@@ -303,6 +368,15 @@ export const projects: Project[] = [
       },
       {
         title: '공용 설정으로 묶는 대신 전용 실행기를 둔 이유',
+        brief: {
+          plan: '상태 전환 스케줄러를 팀의 공용 설정에 묶을지, 따로 둘지 정해야 했습니다.',
+          build: [
+            '공용 설정은 발급 기능에 영향이 갈 수 있고 팀원이 수정 중',
+            '비용 차이가 크지 않아 전용 실행기를 선택',
+            '조건부 UPDATE로 같은 전환이 두 번 적용되지 않게 처리',
+          ],
+          outcome: '#68 #74 #101 #145 병합. 팀원의 구현 영역을 다시 고치지 않고 통합했습니다.',
+        },
         plan: '이벤트와 쿠폰의 상태를 시각과 재고에 맞춰 자동으로 바꾸는 스케줄러를 맡았습니다. 처음에는 팀의 다른 예약 작업과 같은 공용 설정에 묶으려 했습니다.',
         build:
           '이 프로젝트에서 가장 중요한 기능은 쿠폰 발급이고 스케줄러는 그다음이었습니다. 발급 쪽은 Redis와 Kafka가 얽혀 있어 공용 설정을 바꾸면 어디에 영향이 갈지 예측하기 어려웠고, 그 설정은 다른 팀원이 수정하는 중이었습니다. 전용 실행기를 두는 비용도 큰 차이가 없어 영향 범위가 작은 쪽을 택했습니다. 상태는 현재 값이 기대한 값일 때만 바꾸는 조건부 UPDATE로 처리해 같은 전환이 두 번 적용되지 않게 했고, Awaitility로 실제 스케줄 실행을 기다리는 테스트를 작성했습니다.',
@@ -323,6 +397,15 @@ export const projects: Project[] = [
       },
       {
         title: '여러 갱신 경로가 같은 데이터를 만날 때',
+        brief: {
+          plan: '관리자 수정, 발급, 스케줄러가 같은 쿠폰과 재고를 동시에 갱신합니다.',
+          build: [
+            '상태값 외에 DB 시각 기준 발급 시작 시각과 발급 수량도 확인',
+            '쿠폰 다음 재고 순서로 비관적 락을 잡아 발급 경로와 순서 통일',
+            '이벤트 수정 엔드포인트 3개를 PATCH 1개로 통합',
+          ],
+          outcome: '#83 #87 병합. 테스트 34개 추가, 당시 전체 211개 통과(PR 기록).',
+        },
         plan: '관리자 수정, 발급 처리, 상태 스케줄러가 같은 쿠폰과 재고를 동시에 갱신합니다. 스케줄러가 바꾸는 상태값에만 기대면, 발급 시작 시각이 지났는데 상태가 아직 바뀌지 않은 틈에 정책을 고칠 수 있었습니다.',
         build:
           '기존 값과 PATCH 입력을 합친 최종 정책을 검증하고, 상태 외에 DB 시각 기준 발급 시작 시각과 발급 수량을 함께 확인합니다. 쿠폰 다음 재고 순서로 비관적 락을 잡아 발급 경로와 순서를 맞췄습니다. 이벤트 일반 정보 수정 엔드포인트 3개는 PATCH 1개로 합치고, 상태 변경은 현재 상태를 조건에 둔 UPDATE로 분리했습니다.',
@@ -344,6 +427,15 @@ export const projects: Project[] = [
       },
       {
         title: 'Redis와 DB가 서로 다른 재고를 말할 때',
+        brief: {
+          plan: '재고는 Redis가 실시간으로 판정하고 MySQL이 나중에 확정해, 두 값이 어긋날 수 있습니다.',
+          build: [
+            '쿠폰 생성과 수량 수정 때 Redis 재고를 함께 초기화',
+            'Redis 초기화가 실패하면 DB 변경도 롤백',
+            '목록은 DB 확정 재고와 기준 시각, 단건은 Redis 실시간 값',
+          ],
+          outcome: 'Redis 재고 일치는 통합 테스트로, 목록 쿼리 수는 Hibernate 통계로 확인합니다.',
+        },
         plan: '발급 재고는 Redis가 실시간으로 판정하고 MySQL은 비동기로 확정합니다. 관리자가 쿠폰을 만들거나 수량을 바꿀 때 두 저장소가 어긋나면 발급이 막히거나 화면의 수치가 틀어집니다. 목록에서 쿠폰마다 Redis를 읽으면 왕복이 늘고, 한 건의 오류가 목록 전체를 실패시킵니다.',
         build:
           '쿠폰 생성과 총수량 수정 때 Redis 발급 재고를 함께 초기화하고, Redis 초기화가 실패하거나 값이 되읽히지 않으면 DB 변경을 롤백합니다. 목록은 DB에 확정된 재고와 그 기준 시각(stockUpdatedAt)을, 단건 조회는 Redis 실시간 재고를 씁니다.',
@@ -366,6 +458,15 @@ export const projects: Project[] = [
       },
       {
         title: '관리자 인증이 설정 실수로 열리지 않도록',
+        brief: {
+          plan: '인증 코드가 비거나 토큰 원문이 남으면 설정 실수가 곧 관리자 권한 노출이 됩니다.',
+          build: [
+            '세션 토큰은 해시로만 Redis에 저장하고 TTL 적용',
+            '인증 코드가 빈 값이면 세션 발급 거절',
+            'SSE로 나가는 로그에서 인증 정보 마스킹',
+          ],
+          outcome: '해시 저장, 세션별 폐기, 빈 인증 코드 거절을 테스트로 확인합니다.',
+        },
         plan: '관리자 API는 이벤트·쿠폰 수정과 운영 모니터링을 엽니다. 인증 코드가 비어 있거나 토큰 원문이 저장소에 남으면, 설정 실수나 저장소 노출이 곧 관리자 권한 노출로 이어집니다.',
         build:
           '세션 토큰은 원문 대신 해시로 Redis에 저장하고 TTL을 적용합니다. 인증 코드는 상수 시간 비교로 확인하고, 빈 값으로 설정되면 세션 발급을 거절합니다. 모니터링 SSE로 나가는 로그에서는 관리자 키·쿠키 같은 인증 정보를 마스킹했습니다.',
@@ -426,10 +527,19 @@ export const projects: Project[] = [
     github: 'https://github.com/Catverdose/engineering-memory',
     live: profile.liveAvailable ? profile.live : undefined,
     overview:
-      '프로젝트 문서, 장애 기록, 기술 결정과 학습 노트를 저장하고 그 기록을 근거로 답합니다. 연결과 트래픽 제어는 nginx·Go Gateway가, 데이터 정합성과 도메인 규칙은 Spring Boot·PostgreSQL이 책임집니다. GCP L4 Spot 환경에 Docker와 NVIDIA runtime을 구성해 배포하고 색인·검색을 E2E로 검증했습니다.',
+      '개발 기록을 저장하고 그 기록을 근거로 답하는 개인 RAG 서비스입니다. GCP L4 Spot에 배포해 색인과 검색을 E2E로 검증했고 도메인에는 Caddy로 HTTPS를 붙였습니다. 지금은 서버를 내려 두었습니다.',
     features: [
       {
         title: '늦게 끝난 색인이 최신 문서를 덮어쓰지 않도록',
+        brief: {
+          plan: '비동기 색인 중에 문서가 수정되면 늦게 끝난 이전 작업이 새 문서를 덮어쓸 수 있습니다.',
+          build: [
+            '임베딩 계산은 트랜잭션 밖에서 수행',
+            '저장 직전에 version, 상태, attempt를 다시 확인',
+            '일치할 때만 chunk 교체와 READY 전환을 한 트랜잭션으로',
+          ],
+          outcome: '연속 요청 합치기, 동시 처리 한도, 기동 시 복구를 테스트합니다.',
+        },
         plan: '등록 API가 202 Accepted를 반환한 뒤 비동기 색인이 진행됩니다. 이 사이 문서가 수정되면 이전 작업의 embedding이 새 문서를 덮어쓸 수 있습니다. 외부 모델 호출을 트랜잭션 안에 두면 락이 길어지므로, 계산은 밖에서 하고 저장 직전에 다시 확인하기로 했습니다.',
         build:
           '저장 직전에 version·status·attempt UUID를 확인합니다. 일치하지 않으면 결과를 버리고 재색인을 예약합니다. 기존 chunk 삭제, 새 chunk 삽입, READY 전환은 한 트랜잭션으로 처리합니다.',
@@ -452,6 +562,15 @@ export const projects: Project[] = [
       },
       {
         title: '답변 생성 도중 서버가 멈춰도 상태는 남도록',
+        brief: {
+          plan: '생성 중 서버가 재기동되면 끝나지 않는 답변이 남고, 근거 없는 질문에는 모델이 답을 지어낼 수 있습니다.',
+          build: [
+            'GENERATING 상태를 먼저 저장하고 완료 때 확정',
+            '기동 시 남은 GENERATING은 FAILED로 복구',
+            '근거가 없으면 LLM을 부르지 않고 NO_CONTEXT 저장',
+          ],
+          outcome: '상태 전이와 복구 경로를 아키텍처 문서에 정리했습니다.',
+        },
         plan: 'LLM 생성은 오래 걸릴 수 있습니다. 서버가 재기동되면 사용자가 끝나지 않는 답변을 보게 될 수 있습니다. 근거가 없는 질문에 모델이 답을 지어내는 것도 막아야 했습니다.',
         build:
           'beginTurn에서 사용자 메시지와 GENERATING 답변을 먼저 저장합니다. completeTurn에서 답변과 근거를 확정하고, 기동 시 남은 GENERATING은 FAILED로 복구합니다. 유사도 0.45 이상인 근거가 없으면 NO_CONTEXT를 저장하고 LLM 호출을 생략합니다.',
@@ -468,6 +587,15 @@ export const projects: Project[] = [
       },
       {
         title: '사용자 데이터 격리를 DB까지 이어가기',
+        brief: {
+          plan: '한 DB를 여러 사용자가 쓰면 조회 조건 실수 하나가 다른 사용자의 기록 노출이 됩니다.',
+          build: [
+            'owner ID는 인증 정보에서만 가져옴',
+            '모든 조회에 owner 조건 적용',
+            '(id, owner_id) 복합 FK로 교차 참조를 DB에서 거부',
+          ],
+          outcome: '다른 사용자의 문서가 검색에 섞이지 않는지 통합 테스트로 확인합니다.',
+        },
         plan: '하나의 DB를 공유하는 환경에서는 조회 조건의 실수 하나가 다른 사용자의 기록 노출로 이어질 수 있습니다. 읽기 조건만으로는 잘못된 저장을 막을 수 없어 DB 제약을 함께 두기로 했습니다.',
         build:
           'owner ID는 인증 principal에서만 가져옵니다. 모든 조회에 owner 조건을 적용하고 (id, owner_id) 복합 FK로 교차 사용자 참조를 DB에서 거부합니다.',
@@ -483,6 +611,15 @@ export const projects: Project[] = [
       },
       {
         title: '모델 서버 한 대를 대화와 색인이 나눠 쓸 때',
+        brief: {
+          plan: 'GPU 한 대를 대화와 색인이 함께 써서, 한쪽이 몰리면 다른 쪽이 밀립니다.',
+          build: [
+            '대화는 동시 50건까지, 넘으면 즉시 MODEL_BUSY로 거절',
+            '색인은 대화가 있으면 배치마다 최대 30초 양보',
+            '바깥 계층일수록 timeout을 길게 잡아 안쪽이 먼저 종료',
+          ],
+          outcome: '대화 중 색인 양보와 색인 기아 방지를 테스트합니다.',
+        },
         plan: '답변 생성과 문서 임베딩이 GPU 한 대의 Ollama를 함께 씁니다. 색인이 몰리면 대화가 늦어지고, 대화가 끊이지 않으면 색인이 끝없이 밀릴 수 있습니다. 요청이 한꺼번에 들어오면 모델 앞에 대기열이 쌓입니다.',
         build:
           '대화는 동시 50건까지만 받고, 넘으면 기다리게 하지 않고 즉시 MODEL_BUSY로 거절합니다. 색인은 대화가 있으면 배치마다 최대 30초까지 양보한 뒤 진행합니다. IP별 요청 제한을 gateway와 backend에 따로 두고, 바깥 계층(nginx > gateway > backend > Ollama)일수록 timeout을 길게 잡아 안쪽이 먼저 끝나게 했습니다.',
@@ -547,10 +684,19 @@ export const projects: Project[] = [
     ],
     github: 'https://github.com/Catverdose/concurrency-strategies',
     overview:
-      '같은 발급 흐름에서 재고 예약 전략만 바꿔 9개를 비교했습니다. 10,000명이 서로 다른 requestId로 세 번씩 요청하자 1인 1매는 모든 전략이 지켰지만, 대상자 전원 발급·응답 분류·재고 원장까지 통과한 전략은 단일 인스턴스의 JVM_LOCK뿐이었습니다. 팀 실험에서는 제가 공통 코드를 만들고 팀원들이 전략을 하나씩 맡았고, 실험이 끝난 뒤 Redis만 해도 방식이 여러 개라는 생각에 혼자 9개로 넓혔습니다.',
+      '같은 발급 흐름에서 재고 예약 전략만 바꿔 9개를 비교했습니다. 1인 1매는 모든 전략이 지켰지만, 판정 기준 6개를 모두 통과한 것은 단일 인스턴스의 JVM_LOCK뿐이었습니다. 팀 실험의 공통 코드를 만든 뒤 혼자 9개로 넓힌 실험입니다.',
     features: [
       {
         title: '최종 재고가 맞아도 정상 회원은 탈락할 수 있다',
+        brief: {
+          plan: '초과 발급이 없다고 정합성이 지켜진 것은 아니라고 보고, 판정 기준을 따로 세웠습니다.',
+          build: [
+            '판정 기준 6개 정의',
+            '회원 1만 명이 서로 다른 requestId로 3번씩 요청(3만 건)',
+            '정순과 역순으로 실행',
+          ],
+          outcome: 'VU 50에서 DECR 9,999명, LUA 9,998명 발급. 원장은 일치했지만 정상 회원이 탈락했습니다.',
+        },
         plan: '처리량만 보면 초과 발급이나 빠른 품절 응답이 좋은 성능처럼 보입니다. 초과 발급이 없다고 정합성이 지켜진 것은 아니라고 보고, 판정 기준을 따로 세우기로 했습니다.',
         build:
           '판정 기준 6개(초과 발급, 재고 원장, 오류 응답, 1인 1매, 대상자 전원 발급, 응답 분류)를 정했습니다. 한 회원이 서로 다른 requestId로 세 번씩 요청하는 시나리오(1만 명, 3만 건)를 만들고 정순과 역순으로 실행했습니다.',
@@ -561,13 +707,22 @@ export const projects: Project[] = [
         evidence: [
           {
             label: '중복 회원 정순 실험 보고서',
-            href: 'https://github.com/Catverdose/concurrency-strategies/blob/main/k6/results/r0816dup1/duplicate-user-report.md',
+            href: 'https://github.com/Catverdose/concurrency-strategies/blob/main/docs/02-duplicate-user.md',
             detail: '대상 회원 10,000명 · 각 3회 요청 · VU 50',
           },
         ],
       },
       {
         title: 'WATCH 전략에서 요청의 90%가 응답을 받지 못했다',
+        brief: {
+          plan: 'WATCH 결과에 무응답이 섞여, 낮은 지연이 정상 성능처럼 보였습니다.',
+          build: [
+            'WATCH만 단독 실행',
+            'Redis 포트를 바꿔 이전 실행의 영향 배제',
+            '성공, 중복, 오류, 무응답과 TIME_WAIT를 함께 기록',
+          ],
+          outcome: '12만 건 중 107,225건 무응답, TIME_WAIT 약 14,900개. 연결 생성과 종료 반복이 원인으로 유력합니다.',
+        },
         plan: 'WATCH 전략 결과에 무응답이 섞여, 낮은 지연이 정상 성능처럼 보였습니다. 알고리즘의 정합성과 요청을 처리할 수 있는지를 나눠 봐야 했습니다.',
         build:
           '다른 전략의 실험을 오염시키지 않도록 WATCH만 단독 실행하고, Redis 포트를 바꿔 이전 실행의 영향을 배제했습니다. 성공, 중복, 오류, 무응답과 TIME_WAIT를 함께 기록했습니다.',
@@ -578,13 +733,21 @@ export const projects: Project[] = [
         evidence: [
           {
             label: 'WATCH 연결 고갈 재현 결과',
-            href: 'https://github.com/Catverdose/concurrency-strategies/blob/main/k6/results/r0816dup1/duplicate-user-report.md',
+            href: 'https://github.com/Catverdose/concurrency-strategies/blob/main/docs/03-vu-scaling.md',
             detail: '전송 실패·TIME_WAIT 관찰값과 성능 비교 제외 이유',
           },
         ],
       },
       {
         title: 'VU를 늘려도 처리량은 늘지 않았다',
+        brief: {
+          plan: '가상 사용자를 늘릴 때 처리량과 지연이 어떻게 변하는지 확인하려 했습니다.',
+          build: [
+            '9개 전략을 VU 10, 50, 100, 200에서 실행',
+            '36개 조건, 조건마다 3만 건(요청 시도 108만 건)',
+          ],
+          outcome: 'WATCH를 뺀 8개 전략은 VU 50에서 200으로 늘려도 처리량이 1.0~8.3%만 늘고 p95만 커졌습니다.',
+        },
         plan: '동시에 실행하는 가상 사용자를 늘릴 때 처리량과 지연이 어떻게 변하는지 확인하려 했습니다.',
         build:
           '9개 전략을 VU 10, 50, 100, 200에서 실행했습니다. 36개 조건, 조건마다 3만 건으로 총 108만 건의 요청 시도를 기록했습니다.',
@@ -598,8 +761,8 @@ export const projects: Project[] = [
       '로컬 단일 호스트의 1차 실험입니다. 조건별 1회와 역순 재실행 결과로 성능 순위를 확정하지 않았습니다. JVM_LOCK의 통과도 단일 인스턴스 조건에 한정됩니다.',
     proofs: [
       {
-        label: '실험 보고서·원시 결과',
-        href: 'https://github.com/Catverdose/concurrency-strategies/blob/main/k6/results/r0816dup1/duplicate-user-report.md',
+        label: '중복 회원 실험 보고서',
+        href: 'https://github.com/Catverdose/concurrency-strategies/blob/main/docs/02-duplicate-user.md',
         detail: '정순 실험의 응답 분포·재고 원장·발급 대상 검증',
       },
     ],
@@ -623,10 +786,19 @@ export const projects: Project[] = [
     ],
     github: 'https://github.com/ureca-UBot/UBot-VertorDBTest',
     overview:
-      'RAG 서비스의 Vector DB 후보를 비교하는 harness입니다. 합성 10k chunk, BGE-M3 dense 1024d, cosine Top-10, 동시성 10 조건에서 DB별 4 vCPU·8 GiB를 고정했습니다. 5개 DB·14개 구성의 검색 설정 124개를 독립 재구축 5회, 총 620회 측정했습니다. 성능은 Qdrant가 가장 좋았지만, 팀은 운영 복잡도를 줄이기 위해 이미 쓰고 있는 PostgreSQL의 pgvector를 선택했습니다.',
+      'RAG 서비스의 Vector DB 후보 5종을 비교한 harness입니다. 합성 1만 청크, 동시성 10, DB별 4 vCPU·8 GiB 조건에서 검색 설정 124개를 5회씩, 총 620회 측정했습니다. 성능은 Qdrant가 가장 좋았지만 팀은 이미 쓰는 PostgreSQL의 pgvector를 선택했습니다.',
     features: [
       {
         title: '비교 전에 입력과 정답부터 고정',
+        brief: {
+          plan: '제품마다 부속 서비스와 응답 크기가 달라, 이름만 바꿔 재면 공정하지 않았습니다.',
+          build: [
+            '입력은 SHA-256으로 검증, 정답은 exact cosine search',
+            '모든 DB에 같은 자원(4 vCPU, 8 GiB)',
+            '바꾸는 것은 DB와 검색 설정뿐',
+          ],
+          outcome: 'Recall@10, 지연, QPS, CPU, RAM을 함께 수집했습니다.',
+        },
         plan: '제품마다 부속 서비스와 응답 크기가 달라, 이름만 바꿔 재면 공정하지 않았습니다. 변인 통제부터 정하고, 바꿔서 측정할 것(DB와 검색 설정)만 남기기로 했습니다.',
         build:
           '입력은 SHA-256으로 검증하고 Java exact cosine search를 Ground Truth로 사용했습니다. Calibration query와 evaluation query를 분리했습니다. 자원은 각 DB의 최고 성능을 재려는 것이 아니라 같은 조건에 두려는 것이라, 모든 DB가 돌 수 있는 공통 최저선(4 vCPU, 8 GiB)을 하나 정해 똑같이 맞췄습니다.',
@@ -644,11 +816,19 @@ export const projects: Project[] = [
       },
       {
         title: '가장 빠른 Qdrant 대신 pgvector를 고른 이유',
+        brief: {
+          plan: '가장 빠른 DB는 Qdrant였지만, 벡터 DB를 따로 두면 운영할 저장소가 하나 늘어납니다.',
+          build: [
+            '예상 규모에서 pgvector의 p95가 수십 ms 안인 것을 확인',
+            '팀은 이미 쓰는 PostgreSQL의 pgvector를 선택',
+          ],
+          outcome: 'Recall 0.99 이상에서 p95는 Qdrant 4.1ms, pgvector 32.2ms. UBot은 지금도 pgvector를 씁니다.',
+        },
         plan: '같은 Recall에서 가장 빠른 DB는 Qdrant였습니다. 하지만 서비스는 이미 PostgreSQL을 쓰고 있어, 벡터 DB를 따로 두면 운영하고 데이터를 맞춰야 할 저장소가 하나 늘어납니다.',
         build:
-          '예상 규모(1천~1만 청크)에서 pgvector의 p95가 수십 ms 안에 머무는 것을 확인하고, 복잡성을 줄이기 위해 기존 PostgreSQL의 pgvector를 선택했습니다.',
+          '예상 규모(1천~1만 청크)에서 pgvector의 p95가 수십 ms 안에 머무는 것을 확인했고, 팀은 복잡성을 줄이기 위해 기존 PostgreSQL의 pgvector를 선택했습니다.',
         outcome:
-          'Recall 0.99 이상에서 Qdrant HNSW는 p95 4.1ms · 3,402 QPS, pgvector HNSW는 32.2ms · 1,601 QPS였습니다. Recall 0.95 이상에서는 3.9ms 대 7.3ms였습니다. 합성 1만 청크 · 동시성 10에서 5회 재구축한 중앙값입니다.',
+          'Recall 0.99 이상에서 Qdrant HNSW는 p95 4.1ms · 3,402 QPS, pgvector HNSW는 32.2ms · 1,601 QPS였습니다. Recall 0.95 이상에서는 3.9ms 대 7.3ms였습니다. 합성 1만 청크 · 동시성 10에서 5회 재구축한 중앙값입니다. UBot은 지금도 pgvector를 쓰고 있고, 이후 매장 검색용 PostGIS도 같은 PostgreSQL에 확장으로 붙었습니다.',
         limit:
           '같은 Recall에서 검색 지연은 Qdrant보다 2~8배 깁니다. 데이터가 커지거나 검색 지연이 응답 시간의 병목이 되면 다시 비교합니다.',
         evidence: [
@@ -661,6 +841,14 @@ export const projects: Project[] = [
       },
       {
         title: '불리한 측정도 결과에서 지우지 않기',
+        brief: {
+          plan: '이상치와 warm-up 미달을 지우면 실제 변동성이 가려집니다.',
+          build: [
+            '원시 JSON·CSV와 워밍업 경고 170건 보존',
+            '합의되지 않은 자동 탈락 기준은 적용하지 않음',
+          ],
+          outcome: 'Milvus DISKANN의 Recall 변동은 경고와 함께 결과에 남겼습니다.',
+        },
         plan: '이상치와 warm-up 미달을 제거하면 실제 변동성이 가려지고 특정 구성이 과대평가될 수 있습니다.',
         build:
           '원시 JSON·CSV와 워밍업 경고 170건을 보존했습니다. 보고서의 후보 해석에서는 합의되지 않은 Recall·p95·RAM 자동 탈락 기준을 적용하지 않았으며, 원시 판정과 코드 기본값은 보존했습니다.',
@@ -703,11 +891,20 @@ export const projects: Project[] = [
     ],
     github: 'https://github.com/ureca-UBot/UBot-LLMTest',
     overview:
-      'UBot의 LLM을 어떤 서빙 엔진과 GPU로 띄울지 정하기 위한 실험입니다. 엔진 4종(Ollama, llama.cpp, vLLM, SGLang)을 로컬 RTX 3060, AWS T4, AWS L4 세 환경에서 비교했습니다. 기준선은 30초 측정 창에서 HTTP 완료 초당 8건입니다. 모든 결과는 반복 검증 전의 탐색 결과입니다.',
+      'UBot의 LLM을 어떤 엔진과 GPU로 띄울지 정하려는 실험입니다. 엔진 4종(Ollama, llama.cpp, vLLM, SGLang)을 로컬 RTX 3060, AWS T4, L4에서 비교했고 기준선은 HTTP 완료 초당 8건입니다. 모든 결과는 반복 검증 전의 탐색 결과입니다.',
     features: [
       {
         title: '기준선부터: 왜 초당 8건인가',
-        plan: '목표 없이 재면 숫자를 해석할 수 없어 기준선부터 잡았습니다. 2024년 통신사 보도자료의 월 처리량(월 50만 건 이상, 월 152만 세션)을 역산하니, 고르게 나누면 분당 20~30명이고 문의가 몰리는 시간대로 좁히면 150명 정도였습니다.',
+        brief: {
+          plan: '목표 없이 재면 숫자를 해석할 수 없어 기준선부터 잡았습니다.',
+          build: [
+            '통신사 보도자료의 월 처리량을 역산: 고르게 나누면 분당 20~30명',
+            '몰리는 시간대를 감안해 피크를 분당 150명(초당 약 2.5건)으로 추정',
+            '실험이 실제보다 쉬운 조건이라 여유를 두어 초당 8건 완료로 설정',
+          ],
+          outcome: '이 기준선으로 환경별 결과를 통과와 미달로 나눠 읽었습니다.',
+        },
+        plan: '목표 없이 재면 숫자를 해석할 수 없어 기준선부터 잡았습니다. 2024년 통신사 보도자료의 월 처리량(월 50만 건 이상, 월 152만 세션)을 역산하니, 24시간에 고르게 나누면 분당 20~30명이었습니다. 실제로는 문의가 특정 시간대에 몰린다고 보고 피크를 분당 150명 정도로 잡았습니다.',
         build:
           '분당 150명은 초당 약 2.5건입니다. 실험은 출력 토큰 제한이 있고 답변도 어렵지 않아 실제보다 쉬운 조건이라, 여유를 크게 두어 초당 8건 완료를 기준선으로 정했습니다.',
         outcome: '이 기준선으로 환경별 결과를 통과와 미달로 나눠 읽었습니다.',
@@ -716,6 +913,15 @@ export const projects: Project[] = [
       },
       {
         title: '앞 엔진의 흔적이 다음 측정에 섞이지 않도록',
+        brief: {
+          plan: '엔진을 내려도 GPU 메모리가 한동안 남아, 그대로 다음 엔진을 재면 결과가 섞입니다.',
+          build: [
+            '설정이 끝날 때마다 컨테이너를 지우고 GPU 메모리가 비었는지 확인',
+            '외부 동시 요청 수와 엔진 내부 상한을 구분해 기록',
+            '질문 6개 유형 비율을 유지한 300개 질문으로도 측정',
+          ],
+          outcome: 'L4에서 vLLM 9.13, SGLang 8.17로 기준선 초과를 관측. T4는 1.97, 1.93이었습니다.',
+        },
         plan: 'GPU 하나에서 여러 엔진을 동시에 띄울 수 없어 하나씩 켜고 끄며 재야 했습니다. Ollama에서 엔진을 내려도 GPU 메모리가 한동안 남아 있는 것을 직접 봤고, 그대로 다음 테스트를 시작하면 결과에 영향을 줄 것이라고 판단했습니다.',
         build:
           '설정이 끝날 때마다 컨테이너를 지우고 GPU 메모리가 비었는지 확인한 뒤 다음 설정을 시작하게 했습니다. 외부 동시 요청 수와 엔진 내부 처리 상한을 구분해 기록했고, 실패한 요청도 빼지 않고 남겼습니다. 같은 질문만 보내면 처리량이 왜곡된다고 보고, 기존 질문셋의 6개 유형 비율을 유지한 채 유형당 50개(총 300개)로 줄인 질문으로도 측정했습니다.',
@@ -733,6 +939,13 @@ export const projects: Project[] = [
       },
       {
         title: '상한을 키운다고 처리량이 늘지는 않았다',
+        brief: {
+          plan: 'L4에서 엔진 내부 상한을 넓히면 처리량이 더 오르는지 확인하려 했습니다.',
+          build: [
+            '내부 상한을 넓힌 설정 10개를 추가 측정',
+          ],
+          outcome: '상한 64에서 9.97, 8.77로 올랐지만 128에서는 8.23, 8.43으로 낮아졌습니다.',
+        },
         plan: 'L4에서 엔진 내부 처리 상한을 넓히면 처리량이 더 오르는지 확인하려 했습니다.',
         build: '내부 상한을 넓힌 설정 10개를 추가로 측정했습니다.',
         outcome:
@@ -778,6 +991,15 @@ export const projects: Project[] = [
     features: [
       {
         title: '팀: Todo와 일정의 연결, 그리고 지우는 규칙',
+        brief: {
+          plan: '로그인 여부만으로는 다른 사용자의 Todo 접근을 막을 수 없었습니다.',
+          build: [
+            'Todo, 목록, 하위 할 일, 검색과 페이지 조회',
+            '모든 조회에 사용자 조건 적용',
+            'Todo를 지우면 연결된 일정 정리, 일정을 지우면 Todo 유지',
+          ],
+          outcome: '팀 저장소 #19 #36 병합, #26에서 통합 테스트 11개 작성.',
+        },
         plan: 'Todo와 공유 캘린더의 일정을 연결해야 했습니다. 로그인 여부만으로는 다른 사용자의 Todo 접근을 막을 수 없어, 조회 조건에 사용자를 넣고 연결과 삭제 규칙을 정해야 했습니다.',
         build:
           'Todo, 목록, 하위 할 일, 완료율, 검색과 페이지 조회를 만들고 사용자 조건으로 조회합니다. Todo를 지우면 연결된 일정을 정리하고, 일정을 지우면 Todo는 남깁니다. 다른 사용자 접근 거부 등을 통합 테스트로 작성했습니다.',
@@ -803,9 +1025,18 @@ export const projects: Project[] = [
       },
       {
         title: '개인: 정적 화면을 React로 옮기기',
+        brief: {
+          plan: '정적 HTML과 JavaScript 화면을 개인 저장소에서 React로 옮기기로 했습니다.',
+          build: [
+            'React와 Vite, Context API 인증과 보호 라우트',
+            '동시 401에도 토큰 재발급은 한 번만',
+            '필터 변경과 마지막 항목 삭제 시 페이지 보정',
+          ],
+          outcome: '개인 저장소 #2 병합.',
+        },
         plan: '팀 프로젝트의 화면은 정적 HTML과 JavaScript였습니다. 개인 저장소에서 backend와 frontend를 나누고 React로 옮기기로 했습니다.',
         build:
-          'React와 Vite로 이전하고 Context API 인증과 보호 라우트를 구성했습니다. 여러 요청이 동시에 401을 받으면 토큰 재발급을 한 번만 하도록 요청을 공유하고, 필터를 바꾸거나 마지막 항목을 지웠을 때 페이지를 보정합니다.',
+          'React와 Vite로 이전하고 Context API 인증과 보호 라우트를 구성했습니다. 여러 요청이 동시에 401을 받아도 토큰 재발급은 한 번만 하도록 요청을 공유하는 구조는 팀 단계의 화면에서 만든 것을 옮겼습니다. 필터를 바꾸거나 마지막 항목을 지웠을 때는 페이지를 보정합니다.',
         outcome: '개인 저장소 PR #2가 병합됐습니다.',
         limit:
           '이전 과정에서 팀 단계의 통합 테스트가 빠졌습니다. 일정 연동과 권한 경계의 회귀 테스트를 다시 붙이는 것이 남은 과제입니다.',
@@ -836,25 +1067,25 @@ export const heroProofs = [
     projectId: 'concurrency',
     value: '9',
     unit: '개 전략',
-    label: '동시성 제어를 같은 조건에서 비교하고 판정 기준 6개로 검증',
+    label: '같은 조건에서 비교한 동시성 제어',
   },
   {
     projectId: 'vector-db-benchmark',
     value: '620',
     unit: '회 측정',
-    label: 'Vector DB 5종을 같은 입력과 자원, 정답 기준으로 측정',
+    label: 'Vector DB 5종, 같은 입력과 자원',
   },
   {
     projectId: 'llm-serving',
     value: '4',
     unit: '종 엔진',
-    label: 'LLM 서빙 엔진을 로컬, T4, L4 세 환경에서 비교',
+    label: 'LLM 서빙 엔진, GPU 세 환경',
   },
   {
     projectId: 'ubot',
     value: '29',
     unit: '개 PR',
-    label: 'UBot 백엔드 21개, 프론트 8개 병합 (2026-10-11 기준)',
+    label: 'UBot 백엔드 21 · 프론트 8 병합',
   },
 ]
 
@@ -895,6 +1126,8 @@ export const troubleshooting: {
   projectId: string
   label: string
   title: string
+  /** 첫 화면에 쓰는 한 줄 */
+  summary: string
   symptom: string
   cause: string
   fix: string
@@ -904,6 +1137,7 @@ export const troubleshooting: {
     projectId: 'petcoupon',
     label: 'SSE MONITORING',
     title: '로그 하나가 스스로 불어났다',
+    summary: '큐가 차면 낸 오류를 모니터링이 다시 수집하던 순환을 끊었습니다.',
     symptom:
       '테스트 로그를 하나 보냈는데 같은 로그만 계속 오고 화면이 크게 느려졌습니다.',
     cause:
@@ -916,6 +1150,7 @@ export const troubleshooting: {
     projectId: 'ubot',
     label: 'DEPLOYMENT',
     title: '배포할 때마다 502가 났다',
+    summary: '원인이 세 겹이라, 점검 단계를 넣어 하나씩 지웠습니다.',
     symptom: '수동 CD로 EC2에 배포하자 502 Bad Gateway가 30번 넘게 반복됐습니다.',
     cause:
       '원인이 하나가 아니었습니다. SSH 키, 고정 컨테이너 이름 충돌, 그리고 Compose 프로젝트 이름이 달라 서비스끼리 서로를 찾지 못했습니다.',
@@ -927,6 +1162,7 @@ export const troubleshooting: {
     projectId: 'concurrency',
     label: 'LOAD TEST',
     title: '빠른 응답의 정체는 무응답이었다',
+    summary: '12만 건 중 107,225건이 무응답이었고, VU 네 단계 모두에서 재현했습니다.',
     symptom:
       'WATCH 전략의 지연이 유독 낮았는데, 12만 건 중 107,225건이 응답을 받지 못한 결과였습니다.',
     cause:
@@ -940,30 +1176,36 @@ export const troubleshooting: {
 /** 협업. 수치는 GitHub 기록 기준입니다. */
 export const collaboration: {
   title: string
+  /** 첫 화면에 쓰는 한 줄 */
+  summary: string
   body: string
   meta: string
   projectId?: string
 }[] = [
   {
     title: '팀이 같은 환경에서 시작하도록',
+    summary: '로컬과 CI가 같은 DB 이미지를 쓰게 맞췄습니다.',
     body: '로컬 Compose와 Testcontainers가 같은 DB Dockerfile을 쓰게 하고 pgvector, PostGIS 버전을 고정했습니다. 프론트는 초기 환경과 package-lock을 맞췄습니다.',
     meta: 'UBot 백엔드 #3 #10 · 프론트 #2',
     projectId: 'ubot',
   },
   {
     title: '코드 리뷰와 이슈',
+    summary: '팀원 PR 13건 리뷰, 이슈 14건 등록.',
     body: 'UBot에서 팀원 PR 13건을 리뷰하고 이슈 14건을 등록했습니다.',
     meta: '2026-09-28 집계',
     projectId: 'ubot',
   },
   {
-    title: '문서를 실제 호출로 검증',
-    body: '개발 문서를 현행화하면서 격리 DB와 로컬 백엔드로 문서 내용을 실제 호출했습니다. 52건 중 51건이 일치했고 1건은 문서를 고쳤습니다.',
+    title: '문서를 코드와 실제 호출에 대조',
+    summary: '문서 내용을 실제로 호출해 52건 중 51건 일치.',
+    body: 'UBot 개발 문서를 현행화하면서 격리 DB와 로컬 백엔드로 문서 내용을 실제 호출했습니다. 52건 중 51건이 일치했고 1건은 문서를 고쳤습니다. PetCoupon에서는 README를 컨트롤러와 설정 코드에 대조해 빠진 API와 환경변수 설명을 채웠습니다.',
     meta: 'UBot #107 · PetCoupon #116 #189',
     projectId: 'ubot',
   },
   {
     title: '깔끔한 구조보다 팀의 핵심 기능',
+    summary: '공용 설정 대신 전용 실행기를 택했습니다.',
     body: '스케줄러를 공용 설정에 묶으려다, 발급 기능에 영향이 갈 수 있고 팀원이 수정 중인 설정이라 전용 실행기를 택했습니다. PR 4건을 팀원 영역을 다시 고치지 않고 통합했습니다.',
     meta: 'PetCoupon #68 #74 #101 #145',
     projectId: 'petcoupon',
@@ -975,7 +1217,7 @@ export const concurrencyRun = {
   conditions:
     '회원 10,000명 × 서로 다른 requestId로 3회 요청 · 재고 10,000개 · VU 50 · 단일 애플리케이션 인스턴스',
   source:
-    'https://github.com/Catverdose/concurrency-strategies/blob/main/k6/results/r0816dup1/duplicate-user-report.md',
+    'https://github.com/Catverdose/concurrency-strategies/blob/main/docs/02-duplicate-user.md',
   note: '2026-08-16 정순 보고서 기준입니다. WATCH 행은 보고서에 통합된 r0816dup2w 단독 재실행 결과입니다. 조건별 1회 관찰이며, 로컬 단일 호스트 결과를 일반적인 전략 순위로 해석하지 않습니다.',
 }
 
@@ -1009,7 +1251,7 @@ export const servingResults = [
 ]
 
 // primary: 주력 (GitHub 프로필 README와 같은 기준), used: 프로젝트에서 사용한 경험
-// uses: 그 기술을 실제로 어디에 썼는지. 프로젝트 페이지로 이어집니다.
+// uses: 그 기술을 실제로 어디에 썼는지. 스택 상세 페이지(#/stack)에서 보여 줍니다.
 export const stack: {
   category: string
   primary: string[]
@@ -1076,7 +1318,7 @@ export const stack: {
   {
     category: 'AI / RAG',
     primary: [],
-    used: ['vLLM', 'Ollama', 'bge-m3', 'EXAONE', 'Vector Search'],
+    used: ['vLLM', 'SGLang', 'Ollama', 'llama.cpp', 'Vector Search'],
     uses: [
       {
         text: '서빙 엔진 4종을 GPU 세 환경에서 비교',

@@ -76,8 +76,7 @@ export default function HeroVisual({
           </p>
           <h2 id="project-map-title">문제에서 프로젝트로.</h2>
           <p id="graph-instructions" className="section-lead">
-            서비스에서 만난 질문을 실험으로 검증하고, 다음 설계에 반영했습니다.
-            프로젝트를 선택해 근거를 확인하세요.
+            프로젝트를 선택하면 상세 페이지로 이동합니다.
           </p>
         </header>
         <div className="project-map">

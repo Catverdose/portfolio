@@ -386,6 +386,10 @@ a.card:hover {
   color: var(--ink);
   background: var(--hairline-soft);
 }
+.main-nav a[aria-current='page'] {
+  color: var(--ink);
+  font-weight: 500;
+}
 .nav-github {
   height: 32px;
   padding: 0 12px;
@@ -508,6 +512,43 @@ h1 {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--s-4);
+}
+/* Home page: names only, one row per area */
+.stack-summary {
+  margin: 0;
+  padding-top: var(--s-2);
+  padding-bottom: var(--s-2);
+}
+.stack-summary > div {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: var(--s-4);
+  align-items: center;
+  padding: var(--s-4) 0;
+  border-top: 1px solid var(--hairline);
+}
+.stack-summary > div:first-child {
+  border-top: 0;
+}
+.stack-summary dt {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+.stack-summary dd {
+  margin: 0;
+}
+.stack-summary .stack-chips {
+  margin-top: 0;
+}
+.stack-page-grid {
+  margin-top: var(--s-10);
+  padding-bottom: var(--s-24);
+}
+.stack-card-top h2 {
+  font-size: 20px;
+  line-height: 28px;
+  letter-spacing: -0.4px;
 }
 .stack-card {
   display: flex;
@@ -809,6 +850,10 @@ tbody td {
 }
 
 @media (max-width: 640px) {
+  .stack-summary > div {
+    grid-template-columns: 1fr;
+    gap: var(--s-2);
+  }
   html {
     scroll-padding-top: 76px;
   }

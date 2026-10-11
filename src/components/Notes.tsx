@@ -4,13 +4,55 @@ import Icon from './Icon'
 const projectTitle = (id: string) =>
   projects.find((project) => project.id === id)?.title ?? id
 
-export function Troubleshooting() {
+/** 첫 화면용 요약. 증상부터 확인까지의 과정은 #/troubleshooting 페이지에 있습니다. */
+export function NotesTeaser() {
   return (
     <section
       id="troubleshooting"
       className="section"
-      aria-labelledby="troubleshooting-title"
+      aria-labelledby="notes-title"
     >
+      <div className="container">
+        <header className="section-heading">
+          <p className="eyebrow">TROUBLESHOOTING · TEAMWORK</p>
+          <h2 id="notes-title">막혔던 곳과 팀에서 맡은 일.</h2>
+        </header>
+        <div className="notes-teaser">
+          <div className="card">
+            <p className="eyebrow">문제 해결</p>
+            <ul className="notes-list">
+              {troubleshooting.map((item) => (
+                <li key={item.title}>
+                  <strong>{item.title}</strong>
+                  <span>{item.summary}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="card">
+            <p className="eyebrow">협업</p>
+            <ul className="notes-list">
+              {collaboration.map((item) => (
+                <li key={item.title}>
+                  <strong>{item.title}</strong>
+                  <span>{item.summary}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        <a className="button button-secondary notes-more" href="#/troubleshooting">
+          증상부터 확인까지 보기
+          <Icon name="arrow" size={16} />
+        </a>
+      </div>
+    </section>
+  )
+}
+
+export function Troubleshooting() {
+  return (
+    <section className="section" aria-labelledby="troubleshooting-title">
       <div className="container">
         <header className="section-heading">
           <p className="eyebrow">TROUBLESHOOTING</p>
@@ -57,11 +99,7 @@ export function Troubleshooting() {
 
 export function Collaboration() {
   return (
-    <section
-      id="collaboration"
-      className="section"
-      aria-labelledby="collaboration-title"
-    >
+    <section className="section" aria-labelledby="collaboration-title">
       <div className="container">
         <header className="section-heading">
           <p className="eyebrow">WORKING WITH A TEAM</p>

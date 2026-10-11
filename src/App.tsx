@@ -11,10 +11,24 @@ import type { Project } from './data/projects'
 import Icon from './components/Icon'
 import LoadBoundary from './components/LoadBoundary'
 import HomePage from './pages/HomePage'
+import ProjectsPage from './pages/ProjectsPage'
+import ExperimentsPage from './pages/ExperimentsPage'
+import NotesPage from './pages/NotesPage'
+import StackPage from './pages/StackPage'
 import './pages/project-page.css'
 
 const ProjectPage = lazy(() => import('./pages/ProjectPage'))
 const isProjectRoute = (hash: string) => hash.startsWith('#/')
+
+// 상단 메뉴가 여는 상세 페이지. 첫 화면에는 각 페이지의 요약만 있습니다.
+const sectionPages = {
+  '#/projects': { label: 'Projects', title: '프로젝트' },
+  '#/experiments': { label: 'Experiments', title: '실험' },
+  '#/troubleshooting': { label: 'Troubleshooting', title: '문제 해결과 협업' },
+  '#/stack': { label: 'Stack', title: '기술 스택' },
+} as const
+type SectionHash = keyof typeof sectionPages
+const sectionHashes = Object.keys(sectionPages) as SectionHash[]
 
 export default function App() {
   const [hash, setHash] = useState(window.location.hash)
@@ -25,6 +39,15 @@ export default function App() {
   const id = /^#\/projects\/([a-z0-9-]+)$/.exec(hash)?.[1]
   const project = projects.find((item) => item.id === id)
   const detail = isProjectRoute(hash)
+  const section = sectionHashes.find((item) => item === hash) ?? null
+  // A project page keeps its parent menu item marked.
+  const activeSection: SectionHash | null =
+    section ??
+    (project
+      ? project.tier === 'experiment'
+        ? '#/experiments'
+        : '#/projects'
+      : null)
 
   useEffect(() => {
     const navigate = () => {
@@ -55,9 +78,11 @@ export default function App() {
   useLayoutEffect(() => {
     document.title = project
       ? `${project.title} · Catverdose`
-      : detail
-        ? '프로젝트를 찾을 수 없습니다 · Catverdose'
-        : 'Catverdose · Backend Developer'
+      : section
+        ? `${sectionPages[section].title} · Catverdose`
+        : detail
+          ? '페이지를 찾을 수 없습니다 · Catverdose'
+          : 'Catverdose · Backend Developer'
     const frame = requestAnimationFrame(() => {
       if (detail) {
         window.scrollTo({ top: 0, behavior: 'instant' })
@@ -83,7 +108,7 @@ export default function App() {
       }
     })
     return () => cancelAnimationFrame(frame)
-  }, [hash, detail, project])
+  }, [hash, detail, section, project])
 
   useEffect(() => {
     if (!menuOpen) return
@@ -132,18 +157,16 @@ export default function App() {
             aria-label="주 메뉴"
             className={menuOpen ? 'main-nav is-open' : 'main-nav'}
           >
-            <a href="#projects" onClick={() => setMenuOpen(false)}>
-              Projects
-            </a>
-            <a href="#experiments" onClick={() => setMenuOpen(false)}>
-              Experiments
-            </a>
-            <a href="#troubleshooting" onClick={() => setMenuOpen(false)}>
-              Troubleshooting
-            </a>
-            <a href="#stack" onClick={() => setMenuOpen(false)}>
-              Stack
-            </a>
+            {sectionHashes.map((href) => (
+              <a
+                key={href}
+                href={href}
+                aria-current={activeSection === href ? 'page' : undefined}
+                onClick={() => setMenuOpen(false)}
+              >
+                {sectionPages[href].label}
+              </a>
+            ))}
             <a href="#about" onClick={() => setMenuOpen(false)}>
               About
             </a>
@@ -170,7 +193,15 @@ export default function App() {
         </div>
       </header>
 
-      {detail ? (
+      {section === '#/projects' ? (
+        <ProjectsPage onOpen={openProject} />
+      ) : section === '#/experiments' ? (
+        <ExperimentsPage onOpen={openProject} />
+      ) : section === '#/troubleshooting' ? (
+        <NotesPage />
+      ) : section === '#/stack' ? (
+        <StackPage />
+      ) : detail ? (
         project ? (
           <LoadBoundary key={project.id} label="프로젝트 페이지">
             <Suspense
@@ -186,11 +217,11 @@ export default function App() {
         ) : (
           <main id="main" className="page route-not-found">
             <div className="container">
-              <span className="eyebrow">PROJECT NOT FOUND</span>
-              <h1>프로젝트를 찾을 수 없습니다.</h1>
-              <p>프로젝트 맵에서 다시 선택해 주세요.</p>
-              <a className="button button-primary" href="#project-map">
-                프로젝트 맵으로
+              <span className="eyebrow">PAGE NOT FOUND</span>
+              <h1>페이지를 찾을 수 없습니다.</h1>
+              <p>프로젝트 목록에서 다시 선택해 주세요.</p>
+              <a className="button button-primary" href="#/projects">
+                프로젝트 목록으로
               </a>
             </div>
           </main>
