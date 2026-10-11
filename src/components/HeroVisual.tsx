@@ -65,23 +65,27 @@ export default function HeroVisual({
   return (
     <section
       id="project-map"
-      className="project-map"
+      className="section project-map-section"
       aria-labelledby="project-map-title"
     >
-      <div className="project-map-heading section-inset">
-        <div>
-          <span className="map-eyebrow mono">CONNECTED WORK / 06 PROJECTS</span>
-          <h2 id="project-map-title">문제에서 프로젝트로.</h2>
-          <p id="graph-instructions">
-            프로젝트를 선택해 설계와 검증 근거를 확인하세요.
+      <div className="container">
+        <header className="section-heading">
+          <p className="eyebrow">
+            CONNECTED WORK / {String(graphNodes.length).padStart(2, '0')}{' '}
+            PROJECTS
           </p>
-        </div>
-      </div>
+          <h2 id="project-map-title">문제에서 프로젝트로.</h2>
+          <p id="graph-instructions" className="section-lead">
+            서비스에서 만난 질문을 실험으로 검증하고, 다음 설계에 반영했습니다.
+            프로젝트를 선택해 근거를 확인하세요.
+          </p>
+        </header>
+        <div className="project-map">
       <div
         ref={viewport}
         className="map-viewport"
         role="region"
-        aria-label="Catverdose와 6개 프로젝트의 연결 지도"
+        aria-label={`Catverdose와 ${graphNodes.length}개 프로젝트의 연결 지도`}
         aria-describedby="graph-instructions"
       >
         <div
@@ -173,10 +177,7 @@ export default function HeroVisual({
           </span>
         </div>
       </div>
-      <nav
-        className="map-mobile-links section-inset"
-        aria-label="프로젝트 바로 가기"
-      >
+      <nav className="map-mobile-links" aria-label="프로젝트 바로 가기">
         {graphNodes.map((node) => (
           <a
             key={node.id}
@@ -195,12 +196,14 @@ export default function HeroVisual({
           </a>
         ))}
       </nav>
-      <div className="map-footer section-inset">
-        <span>서비스의 문제를 실험으로 검증하고, 다음 설계에 반영했습니다.</span>
+      <div className="map-footer">
+        <span>위쪽은 대표 프로젝트, 양옆과 아래는 실험과 이전 작업입니다.</span>
         <span className="map-legend">
           <i aria-hidden="true" />
           점선은 연관된 문제와 기술
         </span>
+      </div>
+        </div>
       </div>
     </section>
   )

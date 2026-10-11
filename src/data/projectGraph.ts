@@ -9,26 +9,20 @@ export interface GraphPoint {
 export const graphSize = { width: 1080, height: 650 }
 export const graphCenter: GraphPoint = { x: 50, y: 53 }
 
+// Top row: featured work. Sides: experiments that grew out of it. Bottom: the rest.
 const positions: Record<string, GraphPoint> = {
-  'engineering-memory': { x: 25, y: 22 },
-  petcoupon: { x: 75, y: 22 },
-  'vector-db-benchmark': { x: 16, y: 58 },
-  concurrency: { x: 84, y: 58 },
-  ubot: { x: 30, y: 87 },
-  planly: { x: 70, y: 87 },
-}
-const questions: Record<string, string> = {
-  'engineering-memory': '늦게 끝난 색인이 도착한다면?',
-  petcoupon: '구독자 한 명이 느려진다면?',
-  concurrency: '마지막 쿠폰에 요청이 몰린다면?',
-  'vector-db-benchmark': '검색 품질을 더 높이면 얼마나 느려질까?',
-  ubot: '개발과 테스트 환경이 다르다면?',
-  planly: '내 Todo에 다른 사람이 접근한다면?',
+  ubot: { x: 20, y: 20 },
+  'engineering-memory': { x: 50, y: 16 },
+  petcoupon: { x: 80, y: 20 },
+  'vector-db-benchmark': { x: 14, y: 58 },
+  concurrency: { x: 86, y: 58 },
+  'llm-serving': { x: 33, y: 88 },
+  planly: { x: 67, y: 88 },
 }
 export const graphNodes = projects.map((project) => ({
   ...positions[project.id],
   id: project.id,
-  question: questions[project.id],
+  question: project.question,
   project,
 }))
 
@@ -77,15 +71,15 @@ function createEdge(
 // These connections describe related work, not runtime dependencies.
 export const graphEdges = [
   ...graphNodes.map((node) => createEdge('catverdose', node.id)),
-  createEdge('engineering-memory', 'vector-db-benchmark', '검색 품질 · 성능', {
-    x: 14,
-    y: 36,
+  createEdge('ubot', 'vector-db-benchmark', '벡터 DB 선정 근거', {
+    x: 8,
+    y: 38,
   }),
+  createEdge('ubot', 'llm-serving', '서빙 엔진 검증', { x: 37, y: 54 }),
   createEdge('petcoupon', 'concurrency', '서비스 → 개인 검증', {
-    x: 86,
-    y: 36,
+    x: 92,
+    y: 38,
   }),
-  createEdge('vector-db-benchmark', 'ubot', '기술 선정 근거', { x: 19, y: 76 }),
 ]
 export function isConnected(edge: GraphEdge, activeId: string | null) {
   return edge.source === activeId || edge.target === activeId

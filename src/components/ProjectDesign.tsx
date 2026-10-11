@@ -4,6 +4,15 @@ import './project-design.css'
 
 const designProjects = new Set(['engineering-memory', 'ubot', 'planly'])
 
+// The code each diagram summarizes.
+const designSources: Record<string, string> = {
+  'engineering-memory':
+    'https://github.com/Catverdose/engineering-memory/blob/main/backend/src/main/java/com/engineeringmemory/knowledge/service/DocumentIndexWriter.java',
+  ubot: 'https://github.com/ureca-UBot/UBot-BE/blob/develop/src/test/java/com/ubot/PgvectorTestConfiguration.java',
+  planly:
+    'https://github.com/Catverdose/planly-web/blob/main/backend/src/main/java/com/example/demo/todo/service/TodoScheduleLinkService.java',
+}
+
 export function hasProjectDesign(projectId: string) {
   return designProjects.has(projectId)
 }
@@ -18,7 +27,7 @@ export default function ProjectDesign({ project }: { project: Project }) {
           {project.id === 'engineering-memory'
             ? '계산이 끝나도, 저장할 수 있는 것은 아닙니다.'
             : project.id === 'ubot'
-              ? '같은 DB 조건을 로컬과 CI에 적용합니다.'
+              ? '팀 환경: 같은 DB 조건을 로컬과 CI에 적용합니다.'
               : '인증 다음에는 리소스의 소유권을 확인합니다.'}
         </h2>
       </div>
@@ -131,13 +140,7 @@ export default function ProjectDesign({ project }: { project: Project }) {
       )}
       <a
         className="design-source"
-        href={
-          project.id === 'engineering-memory'
-            ? project.cases[0].evidence?.[0].href
-            : project.id === 'ubot'
-              ? project.proofs?.[0].href
-              : project.cases[0].evidence?.[0].href
-        }
+        href={designSources[project.id] ?? project.github}
         target="_blank"
         rel="noreferrer"
       >

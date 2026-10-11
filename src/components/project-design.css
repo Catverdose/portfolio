@@ -1,22 +1,19 @@
 .project-design {
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 30px;
+  border-radius: var(--r-md);
+  padding: 32px;
   background: var(--surface);
 }
 .design-heading {
-  margin-bottom: 26px;
+  margin-bottom: 24px;
 }
 .design-heading h2 {
-  font-size: 1.25rem;
-  font-weight: 550;
-  line-height: 1.6;
-  letter-spacing: -0.035em;
-  margin-top: 10px;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 28px;
+  letter-spacing: -0.4px;
+  margin-top: 8px;
   word-break: keep-all;
-}
-.design-heading .eyebrow {
-  font-size: 0.6875rem;
 }
 .design-columns {
   display: grid;
@@ -177,15 +174,6 @@
 .design-source:hover {
   color: var(--accent);
 }
-.project-overview {
-  max-width: 960px;
-  padding-top: 0;
-  padding-bottom: 36px;
-  font-size: 0.9375rem;
-  color: var(--muted);
-  line-height: 1.95;
-  word-break: keep-all;
-}
 @media (max-width: 767px) {
   .design-columns {
     grid-template-columns: 1fr;
@@ -223,9 +211,5 @@
   }
   .design-conclusion {
     gap: 9px;
-  }
-  .project-overview {
-    font-size: 0.875rem;
-    padding-bottom: 28px;
   }
 }

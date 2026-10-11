@@ -119,33 +119,33 @@ export default function App() {
         <div className="nav-container">
           <a href="#" className="wordmark" aria-label="Catverdose 홈">
             <span className="brand-symbol">
-              <Icon name="code" size={19} />
+              <Icon name="code" size={16} />
             </span>
             catverdose<span className="wordmark-dot">.</span>
           </a>
           <span className="nav-divider" aria-hidden="true">
             /
           </span>
-          <span className="nav-descriptor mono">PORTFOLIO</span>
+          <span className="nav-descriptor">Portfolio</span>
           <nav
             id="main-navigation"
             aria-label="주 메뉴"
             className={menuOpen ? 'main-nav is-open' : 'main-nav'}
           >
-            <a href="#about" onClick={() => setMenuOpen(false)}>
-              About
-            </a>
             <a href="#projects" onClick={() => setMenuOpen(false)}>
               Projects
             </a>
             <a href="#experiments" onClick={() => setMenuOpen(false)}>
               Experiments
             </a>
+            <a href="#troubleshooting" onClick={() => setMenuOpen(false)}>
+              Troubleshooting
+            </a>
             <a href="#stack" onClick={() => setMenuOpen(false)}>
               Stack
             </a>
-            <a href="#contact" onClick={() => setMenuOpen(false)}>
-              Contact
+            <a href="#about" onClick={() => setMenuOpen(false)}>
+              About
             </a>
           </nav>
           <a
@@ -154,9 +154,8 @@ export default function App() {
             target="_blank"
             rel="noreferrer"
           >
-            <Icon name="github" size={17} />
+            <Icon name="github" size={16} />
             <span>GitHub</span>
-            <Icon name="external" size={13} />
           </a>
           <button
             id="menu-toggle"
@@ -176,7 +175,7 @@ export default function App() {
           <LoadBoundary key={project.id} label="프로젝트 페이지">
             <Suspense
               fallback={
-                <main id="main" className="page-frame load-state" role="status">
+                <main id="main" className="page load-state" role="status">
                   프로젝트를 불러오는 중입니다…
                 </main>
               }
@@ -185,13 +184,15 @@ export default function App() {
             </Suspense>
           </LoadBoundary>
         ) : (
-          <main id="main" className="page-frame route-not-found">
-            <span className="eyebrow">PROJECT NOT FOUND</span>
-            <h1>프로젝트를 찾을 수 없습니다.</h1>
-            <p>프로젝트 맵에서 다시 선택해 주세요.</p>
-            <a className="button button-primary" href="#project-map">
-              프로젝트 맵으로
-            </a>
+          <main id="main" className="page route-not-found">
+            <div className="container">
+              <span className="eyebrow">PROJECT NOT FOUND</span>
+              <h1>프로젝트를 찾을 수 없습니다.</h1>
+              <p>프로젝트 맵에서 다시 선택해 주세요.</p>
+              <a className="button button-primary" href="#project-map">
+                프로젝트 맵으로
+              </a>
+            </div>
           </main>
         )
       ) : (
