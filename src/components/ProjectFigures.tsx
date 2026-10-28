@@ -2,15 +2,15 @@ import Icon from './Icon'
 
 /** 프로젝트 목록과 상세 페이지에 두는 구조도와 팀 측정 결과입니다. */
 
-/** UBot: 질문 하나가 모델 서버에 닿기까지. 2026-10 기준 구조입니다. */
+/** UBot: 질문을 접수한 뒤 Worker가 답하기까지. 2026-10 말 기준 구조입니다. */
 export function ChatPipeline() {
   return (
     <div
       className="architecture"
-      aria-label="질문이 Nginx와 채팅 서비스의 사전 검사를 거쳐 검색과 모델 서버로 가는 구조"
+      aria-label="질문을 202로 접수해 DB 작업 원장과 Redis 신호로 넘기고, Worker가 검색과 모델 서버를 호출하는 구조"
     >
       <div className="architecture-header mono">
-        <span>ONE QUESTION, GUARDED</span>
+        <span>ACCEPT NOW, ANSWER LATER</span>
         <Icon name="branch" size={16} />
       </div>
       <div className="architecture-flow">
@@ -20,25 +20,45 @@ export function ChatPipeline() {
           <span>회원 JWT · 게스트 세션</span>
         </div>
         <span className="flow-line" aria-hidden="true" />
+        <div className="architecture-node architecture-core architecture-stack">
+          <Icon name="terminal" />
+          <strong>Spring Boot · API</strong>
+          <dl>
+            <dt>접수 전에</dt>
+            <dd>
+              금지어 검사 <em>400</em>
+            </dd>
+            <dd>
+              횟수·속도 제한 <em>429</em>
+            </dd>
+            <dt>통과하면</dt>
+            <dd>
+              작업 저장 <em>202 · jobId</em>
+            </dd>
+          </dl>
+        </div>
+        <span className="flow-line" aria-hidden="true" />
         <div className="architecture-node">
-          <Icon name="layers" />
-          <strong>Nginx</strong>
-          <span>리버스 프록시 · 게스트 속도 제한</span>
+          <Icon name="database" />
+          <strong>PostgreSQL + Redis Streams</strong>
+          <span>작업 원장은 DB · Redis는 신호만</span>
         </div>
         <span className="flow-line" aria-hidden="true" />
         <div className="architecture-node architecture-core architecture-stack">
-          <Icon name="terminal" />
-          <strong>Spring Boot · 채팅</strong>
+          <Icon name="activity" />
+          <strong>AI Worker</strong>
           <dl>
-            <dt>모델을 부르기 전에</dt>
+            <dt>실행 중</dt>
             <dd>
-              금지어 검사 <em>차단 400</em>
+              heartbeat <em>끊기면 회수</em>
             </dd>
             <dd>
-              게스트 횟수 확인 <em>초과 429</em>
+              늦은 결과 <em>펜싱으로 버림</em>
             </dd>
-            <dt>통과하면</dt>
-            <dd>FAQ 검색 · 답변 생성</dd>
+            <dt>끝나면</dt>
+            <dd>
+              DB 커밋 <em>그 뒤 ACK</em>
+            </dd>
           </dl>
         </div>
         <div className="flow-fork" aria-hidden="true" />
@@ -46,19 +66,19 @@ export function ChatPipeline() {
           <div className="architecture-node">
             <Icon name="database" />
             <strong>pgvector</strong>
-            <span>FAQ 검색 · 모델별 Profile</span>
+            <span>FAQ 검색 · HNSW</span>
           </div>
           <div className="architecture-node">
             <Icon name="layers" />
-            <strong>Ollama | vLLM</strong>
-            <span>임베딩 · LLM · AI_MODE</span>
+            <strong>vLLM</strong>
+            <span>Spot GPU · NLB</span>
           </div>
         </div>
       </div>
       <span className="diagram-note">
-        배포 · GitHub Actions 수동 CD → EC2 Docker Compose
+        프론트는 jobId로 1.5초마다 조회 · 배포는 OIDC → ECR → SSM
       </span>
-      <div className="architecture-footer mono">FILTER FIRST. MODEL LAST.</div>
+      <div className="architecture-footer mono">THE DB KEEPS EVERY JOB.</div>
     </div>
   )
 }

@@ -58,6 +58,8 @@ export const profile = {
 
 const ubotBe = 'https://github.com/ureca-UBot/UBot-BE'
 const ubotFe = 'https://github.com/ureca-UBot/UBot-FE'
+const ubotServerTest = 'https://github.com/ureca-UBot/UBot-ServerTest'
+const ubotVectorDb = 'https://github.com/ureca-UBot/UBot-VectorDBTest'
 const petcoupon = 'https://github.com/PetCare-Platform/petcoupon-backend'
 
 export const projects: Project[] = [
@@ -69,30 +71,206 @@ export const projects: Project[] = [
     tier: 'featured',
     typeLabel: '팀 프로젝트',
     period: '2026.09 ~ 2026.10',
-    question: '모델 서버를 바꾸면 무엇이 깨질까?',
+    question: '모델이 멈추면 접수된 질문은 어디로 갈까?',
     description:
-      '통신 상담 RAG 챗봇의 채팅 보호, 모델 서버 전환, 배포를 맡다',
-    role: '채팅 입력 필터 · 비회원 채팅 · 모델 서버 전환 구조 · 상품 관리 · 개발 환경과 배포',
-    contribution: ['백엔드 Merged PR 21개', '프론트 Merged PR 8개'],
+      '통신 상담 RAG 챗봇에서 답변의 비동기 처리와 장애 복구, AWS 배포와 운영을 맡다',
+    role: '비동기 채팅·장애 복구 · AWS 인프라·CI/CD · 운영 지표·알림 · 입력 필터·비회원 채팅 · 모델 서버 전환',
+    contribution: [
+      '백엔드 Merged PR 34개',
+      '프론트 Merged PR 15개',
+      '팀원 PR 리뷰 49건',
+    ],
     technologies: [
       'Spring Boot',
       'PostgreSQL',
       'pgvector',
+      'Redis Streams',
       'vLLM',
-      'Docker',
-      'Nginx',
+      'AWS',
       'Terraform',
-      'React',
+      'Prometheus',
     ],
     highlights: [
-      'LLM을 부르기 전에 금지어와 비회원 횟수를 거르는 채팅 앞단',
-      '설정값으로 LLM, 임베딩 서버를 바꾸는 구조와 공통 계약 테스트',
-      'Docker, Nginx, EC2 수동 CD와 502 반복 해결',
+      '질문은 202로 접수하고 Worker가 생성, 장애 4종을 주입해도 작업 유실 0건',
+      'AWS 실서비스 경로로 6,000건 재시험, 시스템 오류 4건',
+      'Terraform·OIDC·SSM 배포와 배포 실패 뒤 Worker 자동 복구',
     ],
     github: ubotBe,
     overview:
-      'FAQ 검색과 LLM 답변, 매장 지도를 제공하는 통신사 상담 챗봇이고 팀 프로젝트입니다. 저는 채팅 앞단, 모델 서버 전환 구조, 상품 관리, 개발 환경과 배포를 맡았습니다. 회원 인증(JWT), FAQ 관리, 매장 지도 검색은 팀원이 담당했습니다.',
+      'FAQ 검색과 LLM 답변, 상담사 연결, 매장 지도를 제공하는 통신사 상담 챗봇이고, AWS에 배포해 2026년 10월까지 운영한 팀 프로젝트입니다. 저는 답변 생성의 비동기 처리와 장애 복구, AWS 인프라와 배포, 운영 지표와 알림, 채팅 앞단(금지어, 비회원), 모델 서버 전환 구조를 맡았습니다. 이 밖에 상담사 연결(#244)과 본인 회선 통신정보 조회 API(#165)도 구현했습니다. 회원 인증(JWT), FAQ 관리, 매장 지도 검색은 팀원이 담당했습니다.',
     features: [
+      {
+        title: '모델이 느려도 질문이 실패하지 않도록',
+        brief: {
+          plan: '요청 스레드가 LLM 답변을 끝까지 기다리는 구조라, 질문이 몰리면 시간 초과로 실패했습니다.',
+          build: [
+            '질문은 202와 jobId로 바로 접수하고 답변은 별도 Worker가 생성',
+            '작업 원본은 DB의 chat_jobs, Redis Streams는 Worker를 깨우는 신호만',
+            'Worker 동시 실행 수와 LLM 동시 호출 수에 상한',
+          ],
+          outcome: '로컬 동시 1,000건에서 시간 초과·실패가 321건에서 0건으로 줄었습니다(#214).',
+        },
+        plan: '채팅 API의 요청 스레드가 LLM 답변이 끝날 때까지 기다렸습니다. 질문이 몰리면 요청이 시간 초과로 실패하고, 실패한 질문은 사용자가 다시 보내야 했습니다. 질문 접수와 답변 생성을 나눠, 몰린 요청은 실패시키지 않고 차례로 처리하기로 했습니다.',
+        build:
+          '질문, 재시도, 재검색 API는 202와 jobId를 바로 돌려주고, 프론트는 GET /chat/jobs/{jobId}로 상태(QUEUED → RUNNING → SUCCEEDED 또는 FAILED)와 진행 단계를 조회합니다. 작업의 원본은 DB의 chat_jobs 테이블이고, Redis Streams는 Worker를 깨우는 신호만 맡습니다. 실행 역할(APP_ROLE)을 api와 worker로 나눠 따로 띄우고, Worker의 동시 실행 수와 LLM 동시 호출 수에 상한을 뒀습니다. 프론트에는 1.5초 간격 폴링과 429·5xx 백오프를 붙였습니다(FE #52). 이후 823줄이던 Worker를 실행과 복구 책임으로 나눠 159줄로 줄였습니다(#289).',
+        outcome:
+          '#214, #289와 프론트 #52가 병합됐습니다. 로컬에서 동시 1,000건을 보내자 기존 동기 구조는 321건이 시간 초과·실패했고 Worker 구조는 0건이었습니다. 정상 답변은 348건에서 625건으로 늘었습니다. #289 시점에 전체 테스트 4,635개가 통과했습니다(PR 기록).',
+        limit:
+          '실패 대신 기다리게 한 구조라 1,000건의 전체 완료 시간은 133초에서 373초로 늘었습니다. 로컬 GPU 한 대의 LLM 처리량이 한계였습니다.',
+        evidence: [
+          {
+            label: '채팅 답변 생성을 비동기 Worker로 분리 (#214)',
+            href: `${ubotBe}/pull/214`,
+            detail: '202 접수 · DB 작업 원장 · 동시 1,000건 비교',
+          },
+          {
+            label: 'Worker 실행·복구 책임 분리 (#289)',
+            href: `${ubotBe}/pull/289`,
+          },
+          {
+            label: '작업 상태 폴링 연동 (FE #52)',
+            href: `${ubotFe}/pull/52`,
+          },
+        ],
+      },
+      {
+        title: '서버가 멈춰도 작업이 사라지지 않도록',
+        brief: {
+          plan: 'Worker가 답변 도중 죽거나 Redis 메시지가 사라지면, 접수된 질문이 영영 끝나지 않을 수 있었습니다.',
+          build: [
+            'heartbeat가 끊긴 작업은 다른 Worker가 넘겨받고, 늦게 끝난 이전 실행은 펜싱으로 버림',
+            'Redis ACK는 DB 커밋 뒤에, 메시지가 유실되면 DB 기준으로 다시 발행',
+            'vLLM 연결 실패·5xx는 Worker 안에서 재시도, 실행 마감은 하나로 계산',
+          ],
+          outcome: 'Worker, Redis, PostgreSQL, vLLM을 하나씩 강제 종료해도 각 100건이 모두 완료, 유실·중복 저장 0건(로컬).',
+        },
+        plan: '접수와 생성을 나누자 새 실패 경계가 생겼습니다. Worker가 답변 도중 죽거나, Redis 메시지가 사라지거나, 늦게 끝난 이전 실행이 새 결과를 덮어쓸 수 있었습니다. 작업의 상태는 DB를 기준으로 두고, 경계마다 실행과 복구의 책임을 정하기로 했습니다.',
+        build:
+          'Worker는 실행 중 heartbeat를 갱신하고, heartbeat가 끊긴 작업은 다른 Worker가 넘겨받습니다. 이전 실행이 늦게 끝나도 started_at 펜싱으로 그 결과를 버립니다. Redis ACK는 DB 커밋 뒤에 보내고, 메시지가 유실되면 DB를 기준으로 다시 발행합니다. 종료할 때 실행 중인 작업은 마무리하거나 대기열로 돌려놓습니다. 이후 vLLM 연결 실패와 5xx는 Worker 안에서 같은 요청만 5초 간격으로 다시 보내고, 실행 마감은 min(선점 + 180초, 접수 + 10분) 하나로 계산하게 했습니다. DB가 멈췄을 때 작업 조회가 매달리지 않도록 요청별 시간 예산(1.5초)을 두고, 넘기면 503으로 답합니다(#281).',
+        outcome:
+          '#214, #281이 병합됐습니다. 로컬에서 실제 모델(Qwen3-4B, BGE-M3)로 작업 100건을 접수한 뒤 Worker, Redis, PostgreSQL, vLLM을 하나씩 강제 종료하고 복구했습니다. 네 경우 모두 100건이 완료됐고 유실, 중복 저장, 실패, 타임아웃은 0건이었습니다. DB를 멈춘 상태의 작업 조회가 2초 안에 503을 돌려주는 것은 통합 테스트로 확인했습니다.',
+        limit:
+          '장애마다 로컬에서 한 번씩 실행한 결과라, AWS에서의 긴 장애나 여러 장애가 겹치는 경우로 확대하지 않습니다. 중복 0은 저장된 답변 기준이며 모델 계산이 한 번만 일어났다는 뜻은 아닙니다.',
+        evidence: [
+          {
+            label: '채팅 작업 장애 대응 개선 (#281)',
+            href: `${ubotBe}/pull/281`,
+            detail: 'vLLM 재시도 · 실행 마감 단일화 · 조회 시간 예산',
+          },
+          {
+            label: '장애 4종 주입 시험 결과 (ServerTest)',
+            href: `${ubotServerTest}/blob/main/fault-recovery/README.md`,
+            detail: 'Worker · Redis · PostgreSQL · vLLM 각 100건',
+          },
+        ],
+      },
+      {
+        title: '실서비스 경로로 6,000건을 보내 보기',
+        brief: {
+          plan: '로컬 결과만으로는 AWS의 실제 경로(FE Nginx → BE → Worker → GPU)에서 버티는지 알 수 없었습니다.',
+          build: [
+            'k6로 합성 회원 3,000명이 서로 다른 질문을 동시에 보내는 시험을 두 번',
+            '실패마다 원인을 찾아 설정에 반영: 대기·실행 한도, 모델 컨텍스트, Nginx 연결 한도',
+            '받은 작업 ID 6,000개를 DB와 하나씩 대조',
+          ],
+          outcome: '최종 6,000건 모두 접수. 답변 5,666건, 정상 거절 330건, 시스템 오류 4건.',
+        },
+        plan: '로컬 부하 시험은 GPU 한 대 기준이라 실제 서비스 경로의 동작을 보여 주지 못했습니다. 운영 중인 서비스의 FE Nginx부터 BE, Worker, GPU 서버까지 실제 경로로 보내 보기로 했습니다.',
+        build:
+          'k6로 합성 회원 3,000명이 서로 다른 질문을 같은 시각에 보내는 시험을 만들었습니다. 질문은 FAQ 1,498개에서 만든 서로 다른 6,000개입니다. 첫 시험(10월 25일)은 6,000건 중 1,235건이 시스템 오류였고, 대부분이 대기·실행 시간 초과(CHAT-016 873건)와 모델 컨텍스트 초과(LLM-003 357건)였습니다. 대기 한도는 1시간, 실행 한도는 10분으로 늘렸습니다. LLM-003은 출력 검사에 질문, 답변, FAQ, 조회 자료가 함께 들어가고 출력 1,024토큰을 예약하면서 모델 한도 4,096토큰을 넘긴 것이 원인이라, 컨텍스트를 8,192토큰으로 바꾸고 기존 AMI로 뜨는 Spot GPU도 같은 값으로 기동하게 했습니다. 재시험 첫 실행에서는 502가 2,499건 났는데, BE Nginx의 연결 한도 512가 고갈된 것이라 8,192로 올렸습니다. 시험 도구의 HTTP 제한도 120초에서 300초로 늘렸습니다.',
+        outcome:
+          '최종 재시험(10월 26일)에서 6,000건을 모두 접수했고 답변 5,666건, 정상 거절 330건, 시스템 오류 4건(LLM-005)이 나왔습니다. 연결 시간 초과, 대기·실행 시간 초과(CHAT-016), LLM-003은 0건이었습니다. HTTP로 받은 작업 ID 6,000개를 DB와 대조해 누락과 불일치가 0건임을 확인했습니다.',
+        limit:
+          '답변 완료까지는 큐 대기가 포함돼 p95가 444초, 645초로 깁니다. 성공 답변 중 같은 일반 보류 문구가 908건이라, 성공이 곧 충분한 답변을 뜻하지는 않습니다. 답변의 사실 일치는 6,000건 전체를 채점하지 않았습니다.',
+        evidence: [
+          {
+            label: 'AWS 채팅 재시험 결과 (ServerTest)',
+            href: `${ubotServerTest}/blob/main/chat-e2e/results/20261026-aws/README.md`,
+            detail: '6,000건 · 중간 실행의 실패 원인과 설정 반영 · DB 대조',
+          },
+          {
+            label: '시험 결과를 반영한 설정 (#318)',
+            href: `${ubotBe}/pull/318`,
+            detail: 'Nginx 연결 수 · 모델 컨텍스트 8,192',
+          },
+        ],
+      },
+      {
+        title: 'AWS 배포, 그리고 배포가 실패했을 때',
+        brief: {
+          plan: 'EC2 수동 배포로 시작했지만, 서버가 나뉘고 GPU를 Spot으로 쓰면서 손으로 관리할 수 없게 됐습니다.',
+          build: [
+            'Terraform으로 VPC, FE·BE EC2, ECR, OIDC, GPU AMI와 Spot ASG를 코드로',
+            'develop CI가 통과하면 OIDC로 ECR에 올리고 SSM으로 BE에 배포',
+            '배포가 Worker를 멈춘 채 실패하면 독립 systemd 타이머가 같은 이미지로 복구',
+          ],
+          outcome: '실제 AWS 배포 성공(Flyway V41, Prometheus 대상 5개 up). 배포 강제 종료 뒤 Worker 복구는 로컬 Linux에서 확인.',
+        },
+        plan: '처음에는 백엔드 이미지와 배포 Compose를 만들고(#56, #58) GitHub Actions 수동 CD로 EC2 한 대에 배포했습니다. 502가 30번 넘게 반복되던 문제는 배포 전 점검 단계를 넣어 하나씩 해결했습니다(#77, #88). Redis와 Prometheus 기반을 붙이고(#120), LLM 실험용 GPU 서버는 Terraform으로 필요할 때만 만들고 지우게 했습니다(#133). 이후 FE, BE, GPU 서버가 나뉘고 GPU를 Spot으로 쓰면서 자원과 배포를 손으로 관리하기 어려워졌습니다.',
+        build:
+          'Terraform으로 VPC와 서브넷, FE·BE EC2, ECR과 GitHub Actions OIDC, IAM 역할, AI용 NLB, GPU AMI 빌더와 Spot GPU Auto Scaling Group을 코드로 관리합니다(#306). BE는 develop CI가 성공하면 OIDC 역할로 ECR에 이미지를 올리고 SSM으로 EC2에 배포합니다(#261). FE는 서버에서 같은 커밋을 빌드해 current 링크를 바꾸고, 새 버전이 뜨지 않으면 이전 릴리스로 되돌립니다(FE #72). 그런데 CD가 Worker를 멈춘 뒤 실패하면, API는 질문을 받는데 답변할 Worker가 없는 상태가 됩니다. SSM, Worker와 독립된 systemd 타이머가 30초마다 확인해 API가 정상이면 같은 이미지 digest로 Worker를 복구하게 했습니다. 배포 잠금으로 배포와 동시에 돌지 않게 하고, API 비정상이나 점검 중에는 복구를 보류합니다(#318).',
+        outcome:
+          '#261, #306, #318과 프론트 #72가 병합됐습니다. BE는 실제 AWS 배포에서 Flyway V41 적용과 Prometheus 대상 5개 up을, FE는 실제 서비스 반영(검증 38초, 배포 49초)을 확인했습니다. 배포 스크립트를 Worker 정지 직후 강제 종료(SIGKILL)했을 때 외부 복구가 되는 것은 로컬 Linux에서 확인했고, AWS에는 타이머를 설치한 뒤 기존 Worker를 유지한 채 새 질문이 정상 처리되는 것을 확인했습니다.',
+        limit:
+          '강제 종료 시험은 AWS가 아니라 로컬 Linux에서 했습니다. #318 커밋 전체를 CD로 다시 배포하는 것은 PR 시점에 실행하지 않았습니다. 환경별 Terraform 값과 state는 저장소에 넣지 않았습니다.',
+        evidence: [
+          {
+            label: 'AWS Worker 자동 복구 (#318)',
+            href: `${ubotBe}/pull/318`,
+            detail: '독립 systemd 타이머 · 배포 잠금 · 같은 이미지 digest',
+          },
+          {
+            label: 'AWS BE CI/CD와 Prometheus (#261)',
+            href: `${ubotBe}/pull/261`,
+            detail: 'OIDC → ECR → SSM',
+          },
+          {
+            label: 'AWS Terraform 스택 (#306)',
+            href: `${ubotBe}/pull/306`,
+            detail: 'VPC · EC2 · ECR · NLB · Spot GPU ASG',
+          },
+          {
+            label: 'AWS FE CD와 자동 되돌리기 (FE #72)',
+            href: `${ubotFe}/pull/72`,
+          },
+          {
+            label: '초기 수동 CD의 Compose 충돌 수정 (#88)',
+            href: `${ubotBe}/pull/88`,
+            detail: '프로젝트 이름 통일 · 배포 전 점검 · Nginx 재생성 순서',
+          },
+        ],
+      },
+      {
+        title: '장애를 사용자보다 먼저 알기',
+        brief: {
+          plan: 'Worker로 나누고 나니 대기열이 밀리는지, LLM이 느려졌는지 로그만으로는 알기 어려웠습니다.',
+          build: [
+            'Chat Job, LLM, 검색, 임베딩, DB, Redis 지표를 역할 태그와 함께 수집',
+            '알림 규칙 6개를 Discord, Slack으로 보내고 알림마다 런북 연결',
+            '알림 설정 생성 스크립트는 값이 틀리면 아무것도 바꾸지 않고 실패',
+          ],
+          outcome: '#268 #274 병합. 로컬에서 실제 Discord·Slack으로 장애(FIRING)와 복구(RESOLVED) 알림 수신.',
+        },
+        plan: '접수와 생성을 나누자 대기열이 밀리는지, LLM이 느려졌는지, Worker가 작업을 회수하고 있는지를 로그만으로는 알기 어려웠습니다. 지표를 먼저 정하고, 장애는 사용자보다 먼저 알 수 있게 하기로 했습니다.',
+        build:
+          'Chat Job의 실행 시간과 대기 시간, 회수 사유, LLM 호출 시간과 동시 호출 수, 임베딩과 벡터 검색 시간, DB 커넥션 사용 시간, Redis 스트림 적체를 지표로 남기고 모든 지표에 role 태그를 붙였습니다(#268). Backend, Worker, PostgreSQL, Redis 장애와 Chat Job 대기 지연, LLM 시간 초과 비율에 알림 규칙 6개를 두고 Alertmanager로 Discord와 Slack에 보냅니다. 알림마다 런북을 연결했고, 알림 설정 생성 스크립트는 기준값이나 Webhook이 틀리면 아무것도 바꾸지 않고 실패합니다(#274).',
+        outcome:
+          '#268, #274가 병합됐습니다. 적체 집계 SQL은 Testcontainers PostgreSQL로, exporter의 지표 이름은 실제 컨테이너로 확인했습니다. 로컬에서 실제 Discord와 Slack으로 장애(FIRING)와 복구(RESOLVED) 알림을 받았습니다.',
+        limit:
+          '알림 수신은 로컬에서 확인했고, PR 시점에 AWS 배포 연결은 후속 작업으로 남겨 두었습니다.',
+        evidence: [
+          {
+            label: '운영 모니터링 지표 (#268)',
+            href: `${ubotBe}/pull/268`,
+            detail: 'Chat Job · LLM · 검색 · 임베딩 · DB · Redis',
+          },
+          {
+            label: 'Prometheus 장애 알림 Discord·Slack 전송 (#274)',
+            href: `${ubotBe}/pull/274`,
+            detail: '알림 규칙 6개 · 런북 · 설정 검증',
+          },
+        ],
+      },
       {
         title: 'LLM을 부르기 전에 걸러야 하는 질문',
         brief: {
@@ -101,14 +279,15 @@ export const projects: Project[] = [
             '관리자 금지어 API 4개와 관리 화면',
             '활성 금지어를 서버 메모리에 두고 커밋 뒤에 갱신',
             '임베딩 전에 검사해 400으로 차단, 걸린 단어는 비공개',
+            '상담 메시지는 금지어 다음에 금지 문장과의 임베딩 유사도로 한 번 더 검사',
           ],
-          outcome: '백엔드 #104, 프론트 #23 병합. 당시 전체 테스트 379개 통과(PR 기록).',
+          outcome: '백엔드 #104 #244, 프론트 #23 병합. 상담 검사는 실제 Worker와 vLLM으로 확인했습니다(PR 기록).',
         },
         plan: '금지어가 든 질문도 임베딩, FAQ 검색, LLM 호출까지 그대로 진행되고 있었습니다. 금지어의 특성상 모델을 부를 필요가 없는 질문이 많을 것이라고 보고, 비용이 큰 호출 앞에서 먼저 거르기로 했습니다. 금지어가 Redis에 둘 만큼 많지는 않을 것이라 서버 메모리 캐시를 쓰기로 했습니다.',
         build:
-          '관리자 금지어 API 4개(등록, 목록, 단어 수정, 상태 변경)를 만들고, 활성 금지어를 서버 시작 때 메모리에 올립니다. 캐시는 변경 트랜잭션이 커밋된 뒤에 새 목록으로 통째로 바꿔, 캐시와 DB가 어긋나지 않게 했습니다. 채팅에서는 임베딩 전에 금지어를 검사해 400으로 차단하고, 걸린 단어는 응답에 드러내지 않습니다. 관리자 동시 수정은 행 잠금으로 막았고, 단어와 상태는 바꾸려는 것만 수정하도록 엔드포인트를 나눴습니다. 프론트에는 금지어 관리 화면을 만들었습니다.',
+          '관리자 금지어 API 4개(등록, 목록, 단어 수정, 상태 변경)를 만들고, 활성 금지어를 서버 시작 때 메모리에 올립니다. 캐시는 변경 트랜잭션이 커밋된 뒤에 새 목록으로 통째로 바꿔, 캐시와 DB가 어긋나지 않게 했습니다. 채팅에서는 임베딩 전에 금지어를 검사해 400으로 차단하고, 걸린 단어는 응답에 드러내지 않습니다. 관리자 동시 수정은 행 잠금으로 막았고, 단어와 상태는 바꾸려는 것만 수정하도록 엔드포인트를 나눴습니다. 프론트에는 금지어 관리 화면을 만들었습니다. 이후 상담사 연결(#244)에서도 같은 금지어 필터를 먼저 적용하고, 통과한 메시지만 Worker가 관리자가 등록한 금지 문장과 임베딩 유사도로 한 번 더 비교해 허용된 메시지만 상담사에게 전달하게 했습니다.',
         outcome:
-          '백엔드 #104와 프론트 #23이 병합됐습니다. 단위, 통합, E2E 테스트를 작성했고 당시 전체 테스트 379개가 통과했습니다(PR 기록).',
+          '백엔드 #104와 프론트 #23이 병합됐습니다. 단위, 통합, E2E 테스트를 작성했고 당시 전체 테스트 379개가 통과했습니다(PR 기록). 상담 검사(#244)는 자동 검증 869건 중 864건 통과, 실패 0건(환경 조건으로 제외 5건)이었고, 실제 두 계정으로 금지어·유사도 차단을 확인했습니다.',
         limit:
           '캐시는 서버 한 대 기준입니다. 검사는 단순 포함 여부라 띄어쓰기나 변형으로 우회하는 입력은 막지 못합니다. 차단 건수나 LLM 호출 절감은 측정하지 않았습니다.',
         evidence: [
@@ -116,6 +295,11 @@ export const projects: Project[] = [
             label: '금지어 관리 API와 채팅 입력 필터 (#104)',
             href: `${ubotBe}/pull/104`,
             detail: '로컬 캐시 · 커밋 후 갱신 · LLM 호출 전 차단',
+          },
+          {
+            label: '상담사 연결과 상담 메시지 검사 (#244)',
+            href: `${ubotBe}/pull/244`,
+            detail: '금지어 필터 → 금지 문장 임베딩 유사도',
           },
           {
             label: '관리자 금지어 관리 화면 (FE #23)',
@@ -160,7 +344,7 @@ export const projects: Project[] = [
       {
         title: '실험 결과를 코드로: 모델 서버 바꿔 끼우기',
         brief: {
-          plan: '서빙 실험에서 vLLM이 기준선을 넘었지만 백엔드는 Ollama 호출에 묶여 있었습니다.',
+          plan: '서빙 실험에서 답변과 임베딩 모두 vLLM이 앞섰지만 백엔드는 Ollama 호출에 묶여 있었습니다.',
           build: [
             '설정값으로 LLM과 임베딩 클라이언트 구현체를 선택',
             '두 구현체가 같은 동작을 하는지 공통 계약 테스트로 확인',
@@ -168,7 +352,7 @@ export const projects: Project[] = [
           ],
           outcome: '#138 #144 #146 #150 #153 병합. 전체 테스트는 534개에서 766개 통과로 늘었습니다(PR 기록).',
         },
-        plan: '서빙 실험에서 vLLM이 기준선을 넘었지만 백엔드는 Ollama 호출에 묶여 있었습니다. 임베딩 서버를 바꾸면 이미 저장된 벡터와 새 벡터가 섞이는 문제도 있었습니다. 기존 Ollama 경로는 그대로 두고 구현체를 하나 더 추가하는 방향으로 잡았습니다.',
+        plan: '서빙 실험에서 답변 모델은 vLLM이 기준선을 넘었고, 임베딩도 vLLM의 처리량이 Ollama보다 높았습니다. 하지만 백엔드는 Ollama 호출에 묶여 있었습니다. 임베딩 서버를 바꾸면 이미 저장된 벡터와 새 벡터가 섞이는 문제도 있었습니다. 기존 Ollama 경로는 그대로 두고 구현체를 하나 더 추가하는 방향으로 잡았습니다.',
         build:
           '먼저 채팅 서비스를 요청 검증, 비동기 실행, 답변 처리 세 클래스로 나눴습니다(#144). 그 위에 설정값으로 LLM 클라이언트 구현체를 고르는 구조를 만들고 OpenAI 호환 클라이언트(vLLM)를 추가했습니다. 두 구현체가 같은 동작을 하는지 확인하는 공통 계약 테스트를 두었습니다(일반 응답, 도구 실행과 호출 한도, 타임아웃, 연결 거부, 빈 응답). 임베딩도 같은 방식으로 분리했고, 응답 벡터가 1024차원이 아니면 저장하지 않습니다. 벡터는 임베딩 서버와 모델별 Profile로 나눠 저장하고 검색하며, 지금 Profile에 없는 벡터를 채우는 백필 API와 스크립트를 만들었습니다. 모델 서버는 .env의 AI_MODE 하나로 정합니다.',
         outcome:
@@ -192,41 +376,6 @@ export const projects: Project[] = [
           {
             label: '채팅 서비스 책임 분리 (#144)',
             href: `${ubotBe}/pull/144`,
-          },
-        ],
-      },
-      {
-        title: '재배포가 기존 서버를 깨지 않도록',
-        brief: {
-          plan: '8080을 노출하지 않고, 비밀값을 이미지에 넣지 않고, 재배포가 기존 컨테이너를 깨지 않아야 했습니다.',
-          build: [
-            'Java 21 멀티스테이지 이미지, 배포 Compose, Nginx 리버스 프록시',
-            'GitHub Actions 수동 CD: 빌드, EC2 전송, Nginx 경유 헬스체크',
-            '502 반복은 배포 전 점검 단계를 넣어 원인을 하나씩 분리',
-          ],
-          outcome: '#56 #58 #77 #88 병합. 수동 CD 성공과 /actuator/health UP을 PR에 기록했습니다.',
-        },
-        plan: '백엔드를 EC2에 올려야 했습니다. 8080 포트를 직접 노출하지 않을 것, 비밀값을 이미지에 넣지 않을 것, 재배포가 기존 데이터와 컨테이너를 깨지 않을 것을 조건으로 잡았습니다. Docker 멀티스테이지 이미지, Nginx 리버스 프록시, GitHub Actions 수동 실행 배포로 구성하기로 했습니다.',
-        build:
-          'Java 21 멀티스테이지 이미지와 배포용 Compose를 만들고, PostgreSQL과 모델 서버의 healthcheck 뒤에 백엔드가 뜨게 했습니다. Nginx는 80 포트에서 내부망의 백엔드로 넘깁니다. 워크플로는 이미지를 빌드해 커밋 SHA로 태그하고 EC2로 보낸 뒤 Compose를 교체하고, Nginx를 거친 헬스체크로 확인합니다. 수동 CD로 배포하자 502가 30번 넘게 났는데 원인이 하나가 아니었습니다. 배포 전 점검 단계를 넣어 SSH 키 문제를 찾았고, 에러 로그에서 고정 컨테이너 이름 충돌을 찾았습니다. 서비스끼리 서로를 찾지 못하는 부분은 Compose 프로젝트 이름을 통일하고, 백엔드를 바꾼 뒤 Nginx를 다시 만들도록 순서를 고쳤습니다.',
-        outcome:
-          '#56, #58, #77, #88이 병합됐고 PR에 수동 CD 성공, /actuator/health UP, 8080 외부 접근 불가 확인을 기록했습니다. 점검 단계와 Nginx 경유 헬스체크는 재발 방지용으로 워크플로에 남겼습니다. 이후 Redis와 Prometheus 수집 기반(#120), LLM 서빙 테스트용 GPU 서버를 필요할 때 만들고 지우는 Terraform 구성(#133)을 더했습니다.',
-        limit:
-          '수동 실행 배포이고 HTTPS와 서버 자동 시작·중지는 후속 과제입니다. #120은 수집 기반까지이며 캐시 로직이나 대시보드는 만들지 않았습니다.',
-        evidence: [
-          {
-            label: 'Nginx Reverse Proxy와 수동 CD (#77)',
-            href: `${ubotBe}/pull/77`,
-          },
-          {
-            label: '수동 CD 배포 시 Compose 충돌 수정 (#88)',
-            href: `${ubotBe}/pull/88`,
-            detail: '프로젝트 이름 통일 · 배포 전 점검 · Nginx 재생성 순서',
-          },
-          {
-            label: 'Terraform 기반 AWS GPU 테스트 인프라 (#133)',
-            href: `${ubotBe}/pull/133`,
-            detail: 'L4 Spot · Session Manager 접속 · GPU만 따로 삭제',
           },
         ],
       },
@@ -260,48 +409,24 @@ export const projects: Project[] = [
           },
         ],
       },
-      {
-        title: '상품 4종 관리 API와 화면',
-        brief: {
-          plan: '챗봇이 안내할 통신 상품 4종의 데이터와 관리 기능이 없었습니다.',
-          build: [
-            '요금제, 결합상품, 부가서비스, 로밍 CRUD',
-            '조회는 누구나, 변경은 관리자만, 삭제는 소프트 삭제',
-            '동시 수정은 행 잠금과 바뀐 컬럼만 수정으로 처리',
-          ],
-          outcome: '백엔드 #157, 프론트 #36 병합. CRUD·권한 테스트 34개, 동시성 테스트 12개 통과(PR 기록).',
-        },
-        plan: '챗봇이 안내할 통신 상품(요금제, 결합상품, 부가서비스, 로밍) 데이터와 관리 기능이 없었습니다. 비회원도 볼 수 있는 조회와 관리자만 할 수 있는 변경을 나눠야 했습니다.',
-        build:
-          '상품 4종의 CRUD를 만들었습니다. 활성이고 삭제되지 않은 상품은 누구나 조회할 수 있고, 생성과 수정, 상태 변경, 삭제는 관리자만 할 수 있습니다. 삭제는 소프트 삭제이고, 수정과 상태 변경, 삭제는 금지어 관리와 같은 방식(행 잠금, 바뀐 컬럼만 수정)으로 동시 요청을 처리합니다. 프론트의 관리자 화면은 네 종류가 목록, 표, 모달을 함께 쓰고 종류마다 다른 부분만 따로 두었습니다.',
-        outcome:
-          '백엔드 #157과 프론트 #36이 병합됐습니다. CRUD와 조회, 권한 테스트 34개와 동시성 테스트 12개가 통과했습니다(PR 기록).',
-        limit:
-          '버전 검증이 없어 순차 처리된 수정 중 나중 요청의 값이 최종 반영됩니다. 프론트는 테스트 상품이 없어 등록, 수정, 삭제의 실제 호출까지는 확인하지 못했습니다.',
-        evidence: [
-          {
-            label: '상품 조회와 관리자 생성·수정·삭제 (#157)',
-            href: `${ubotBe}/pull/157`,
-          },
-          {
-            label: '상품 4종 화면과 임베딩 백필 화면 (FE #36)',
-            href: `${ubotFe}/pull/36`,
-          },
-        ],
-      },
     ],
     limitations:
-      '팀 프로젝트입니다. 회원 인증(JWT), FAQ 관리, 매장 지도 검색은 팀원이 담당했습니다. 금지어 캐시와 게스트 세션은 서버 한 대를 기준으로 만들었습니다. 실사용자 트래픽에서의 효과는 측정하지 않았습니다.',
+      '팀 프로젝트입니다. 회원 인증(JWT), FAQ 관리, 매장 지도 검색은 팀원이 담당했습니다. 장애 복구 시험은 로컬에서 장애마다 한 번씩 실행했고, AWS 부하 시험은 k6 합성 회원으로 한 결과입니다. 금지어 캐시와 게스트 세션은 서버 한 대를 기준으로 만들었습니다.',
     proofs: [
       {
         label: '백엔드에서 직접 기여한 PR',
         href: `${ubotBe}/pulls?q=is%3Apr+is%3Amerged+author%3ACatverdose`,
-        detail: '병합 21건 (2026-10-11 기준)',
+        detail: '병합 34건 (2026-10-28 기준)',
+      },
+      {
+        label: '부하·장애 시험 도구와 결과 (UBot-ServerTest)',
+        href: ubotServerTest,
+        detail: 'AWS 6,000건 재시험 · 장애 4종 주입 · 알림 설정 검증',
       },
       {
         label: '프론트에서 직접 기여한 PR',
         href: `${ubotFe}/pulls?q=is%3Apr+is%3Amerged+author%3ACatverdose`,
-        detail: '병합 8건 (2026-10-11 기준)',
+        detail: '병합 15건 (2026-10-28 기준)',
       },
       {
         label: '개발 문서 현행화 (#107)',
@@ -331,6 +456,7 @@ export const projects: Project[] = [
     highlights: [
       '관리자 수정과 발급·스케줄러의 경합 제어',
       'SSE 모니터링 오류의 자기증폭 차단',
+      '로그 마스킹 최악 비용 4.7초 → 약 3ms',
     ],
     github: petcoupon,
     overview:
@@ -374,14 +500,15 @@ export const projects: Project[] = [
             '공용 설정은 발급 기능에 영향이 갈 수 있고 팀원이 수정 중',
             '비용 차이가 크지 않아 전용 실행기를 선택',
             '조건부 UPDATE로 같은 전환이 두 번 적용되지 않게 처리',
+            '예외 한 번에 실행기가 멈추지 않도록 작업 전체를 감쌈',
           ],
-          outcome: '#68 #74 #101 #145 병합. 팀원의 구현 영역을 다시 고치지 않고 통합했습니다.',
+          outcome: '#68 #74 #101 #145 병합. 테스트를 깨뜨리던 스케줄러는 설정으로 끌 수 있게 했습니다.',
         },
         plan: '이벤트와 쿠폰의 상태를 시각과 재고에 맞춰 자동으로 바꾸는 스케줄러를 맡았습니다. 처음에는 팀의 다른 예약 작업과 같은 공용 설정에 묶으려 했습니다.',
         build:
-          '이 프로젝트에서 가장 중요한 기능은 쿠폰 발급이고 스케줄러는 그다음이었습니다. 발급 쪽은 Redis와 Kafka가 얽혀 있어 공용 설정을 바꾸면 어디에 영향이 갈지 예측하기 어려웠고, 그 설정은 다른 팀원이 수정하는 중이었습니다. 전용 실행기를 두는 비용도 큰 차이가 없어 영향 범위가 작은 쪽을 택했습니다. 상태는 현재 값이 기대한 값일 때만 바꾸는 조건부 UPDATE로 처리해 같은 전환이 두 번 적용되지 않게 했고, Awaitility로 실제 스케줄 실행을 기다리는 테스트를 작성했습니다.',
+          '이 프로젝트에서 가장 중요한 기능은 쿠폰 발급이고 스케줄러는 그다음이었습니다. 발급 쪽은 Redis와 Kafka가 얽혀 있어 공용 설정을 바꾸면 어디에 영향이 갈지 예측하기 어려웠고, 그 설정은 다른 팀원이 수정하는 중이었습니다. 전용 실행기를 두는 비용도 큰 차이가 없어 영향 범위가 작은 쪽을 택했습니다. 상태는 현재 값이 기대한 값일 때만 바꾸는 조건부 UPDATE로 처리해 같은 전환이 두 번 적용되지 않게 했고, Awaitility로 실제 스케줄 실행을 기다리는 테스트를 작성했습니다. scheduleAtFixedRate는 작업이 예외로 끝나면 다음 실행을 예약하지 않아, 트랜잭션 바깥에서 작업 전체를 감싸 실패해도 다음 주기가 이어지게 했습니다. 통합 테스트가 같은 MySQL을 쓰는 동안 스케줄러가 이력 행을 써서 외래키 오류가 매번 다른 곳에서 났고, 스케줄러마다 켜고 끄는 설정을 달아 해결했습니다.',
         outcome:
-          '#68, #74, #101, #145가 병합됐습니다. 팀원의 구현 영역을 다시 고치지 않고 통합했습니다.',
+          '#68, #74, #101, #145가 병합됐습니다. 팀원의 구현 영역을 다시 고치지 않고 통합했습니다. 예외가 매번 나도 다음 주기에 다시 실행되는지, 설정을 지우면 가드 테스트가 실패하는지 회귀 테스트로 고정했습니다.',
         limit:
           '전용 실행기는 프로세스 단위라, 서버가 여러 대일 때 한 번만 실행된다는 보장은 아닙니다. 지연 감소 같은 수치는 측정하지 않았습니다.',
         evidence: [
@@ -392,6 +519,12 @@ export const projects: Project[] = [
           {
             label: '쿠폰 상태 자동 전이 스케줄러 (#74)',
             href: `${petcoupon}/pull/74`,
+            detail: '전용 실행기 · 예외에도 다음 주기 유지',
+          },
+          {
+            label: '스케줄러 켜고 끄는 설정 (#101)',
+            href: `${petcoupon}/pull/101`,
+            detail: '테스트 중 외래키 오류의 원인 제거',
           },
         ],
       },
@@ -401,19 +534,24 @@ export const projects: Project[] = [
           plan: '관리자 수정, 발급, 스케줄러가 같은 쿠폰과 재고를 동시에 갱신합니다.',
           build: [
             '상태값 외에 DB 시각 기준 발급 시작 시각과 발급 수량도 확인',
+            '더티체킹이 낡은 값을 덮어쓰지 않도록 @DynamicUpdate',
             '쿠폰 다음 재고 순서로 비관적 락을 잡아 발급 경로와 순서 통일',
-            '이벤트 수정 엔드포인트 3개를 PATCH 1개로 통합',
           ],
           outcome: '#83 #87 병합. 테스트 34개 추가, 당시 전체 211개 통과(PR 기록).',
         },
         plan: '관리자 수정, 발급 처리, 상태 스케줄러가 같은 쿠폰과 재고를 동시에 갱신합니다. 스케줄러가 바꾸는 상태값에만 기대면, 발급 시작 시각이 지났는데 상태가 아직 바뀌지 않은 틈에 정책을 고칠 수 있었습니다.',
         build:
-          '기존 값과 PATCH 입력을 합친 최종 정책을 검증하고, 상태 외에 DB 시각 기준 발급 시작 시각과 발급 수량을 함께 확인합니다. 쿠폰 다음 재고 순서로 비관적 락을 잡아 발급 경로와 순서를 맞췄습니다. 이벤트 일반 정보 수정 엔드포인트 3개는 PATCH 1개로 합치고, 상태 변경은 현재 상태를 조건에 둔 UPDATE로 분리했습니다.',
+          '기존 값과 PATCH 입력을 합친 최종 정책을 검증하고, 상태 외에 DB 시각 기준 발급 시작 시각과 발급 수량을 함께 확인합니다. 더티체킹 UPDATE는 바꾸지 않은 컬럼까지 쓰기 때문에, 그대로 두면 스케줄러가 바꾼 ACTIVE를 낡은 READY로 되돌리거나 발급 수량을 0으로 덮어써 초과 발급이 생길 수 있었습니다. 쿠폰과 재고 두 행을 PESSIMISTIC_WRITE로 잡고 @DynamicUpdate로 바꾼 컬럼만 쓰게 했습니다. 잠금 순서는 발급 경로와 같은 쿠폰 다음 재고로 맞춰 교착을 피했습니다. 이벤트 일반 정보 수정 엔드포인트 3개는 PATCH 1개로 합치고, 상태 변경은 현재 상태를 조건에 둔 UPDATE로 분리했습니다.',
         outcome:
           '#83, #87이 병합됐습니다. 쿠폰 수정 PR에서 테스트 34개를 추가했고 당시 전체 211개가 통과했습니다(PR 기록). 팀 공동 부하 테스트에서는 초과·중복 발급 0건이었지만 접수 응답 p95의 회차 평균은 16.31초로 목표에 미달했습니다. 처리량과 지연, 발급 정합성은 팀 전체 결과입니다.',
         limit:
           '이벤트 자체를 잠그는 변경(#219)은 병합되지 않았습니다. 쿠폰과 재고 행 잠금이 Redis까지 포함한 원자성을 뜻하지는 않습니다.',
         evidence: [
+          {
+            label: '관리자 쿠폰 수정 API (#87)',
+            href: `${petcoupon}/pull/87`,
+            detail: '비관적 락 · @DynamicUpdate · 잠금 순서',
+          },
           {
             label: '팀 성과·부하 테스트 조건',
             href: `${petcoupon}/blob/main/README.md`,
@@ -438,7 +576,7 @@ export const projects: Project[] = [
         },
         plan: '발급 재고는 Redis가 실시간으로 판정하고 MySQL은 비동기로 확정합니다. 관리자가 쿠폰을 만들거나 수량을 바꿀 때 두 저장소가 어긋나면 발급이 막히거나 화면의 수치가 틀어집니다. 목록에서 쿠폰마다 Redis를 읽으면 왕복이 늘고, 한 건의 오류가 목록 전체를 실패시킵니다.',
         build:
-          '쿠폰 생성과 총수량 수정 때 Redis 발급 재고를 함께 초기화하고, Redis 초기화가 실패하거나 값이 되읽히지 않으면 DB 변경을 롤백합니다. 목록은 DB에 확정된 재고와 그 기준 시각(stockUpdatedAt)을, 단건 조회는 Redis 실시간 재고를 씁니다.',
+          '쿠폰 생성과 총수량 수정 때 Redis 발급 재고를 함께 초기화하고, Redis 초기화가 실패하거나 값이 되읽히지 않으면 DB 변경을 롤백합니다. 목록은 DB에 확정된 재고와 그 기준 시각(stockUpdatedAt)을, 단건 조회는 Redis 실시간 재고를 씁니다. 기준 시각은 처음에 발급이 확정돼도 바뀌지 않았는데, @Modifying 벌크 UPDATE가 영속성 컨텍스트를 거치지 않아 @LastModifiedDate가 적용되지 않은 것이었습니다. 같은 UPDATE 문에서 시각도 함께 바꾸게 고쳤습니다(#147).',
         outcome:
           '생성·수정 뒤 Redis 재고가 새 수량과 같은지 통합 테스트로 확인합니다. 목록 조회는 Hibernate 통계로 쿠폰 수만큼 쿼리가 늘지 않는지 고정했습니다.',
         limit:
@@ -469,12 +607,21 @@ export const projects: Project[] = [
         },
         plan: '관리자 API는 이벤트·쿠폰 수정과 운영 모니터링을 엽니다. 인증 코드가 비어 있거나 토큰 원문이 저장소에 남으면, 설정 실수나 저장소 노출이 곧 관리자 권한 노출로 이어집니다.',
         build:
-          '세션 토큰은 원문 대신 해시로 Redis에 저장하고 TTL을 적용합니다. 인증 코드는 상수 시간 비교로 확인하고, 빈 값으로 설정되면 세션 발급을 거절합니다. 모니터링 SSE로 나가는 로그에서는 관리자 키·쿠키 같은 인증 정보를 마스킹했습니다.',
+          '세션 토큰은 원문 대신 해시로 Redis에 저장하고 TTL을 적용합니다. 인증 코드는 상수 시간 비교로 확인하고, 빈 값으로 설정되면 세션 발급을 거절합니다. 검사는 필터가 아니라 인터셉터에 둬 오류 응답 형식을 다른 API와 맞췄고, 인증을 건너뛰는 세션 발급은 경로가 아니라 메서드 단위 표시(@NoAdminSession)로 열었습니다. 경로 단위로 열면 같은 경로의 세션 폐기(DELETE)까지 열리기 때문입니다. 모니터링 SSE로 나가는 로그에서는 관리자 키·쿠키 같은 인증 정보를 마스킹했고, [REDACTED]가 찍혔는데 옆에 진짜 값이 남는 부분 마스킹 다섯 가지를 실측으로 찾아 막았습니다(#221).',
         outcome:
           '토큰이 해시로만 저장되는지, 폐기한 세션만 무효화되고 다른 세션은 유지되는지, 인증 코드가 비어 있으면 입력값과 무관하게 발급이 거절되는지 테스트합니다.',
         limit:
           '인증 코드 하나로 세션을 발급하는 구조라 관리자 계정별 권한 구분은 없습니다. 환경변수가 없으면 개발용 기본 코드가 적용되므로 배포 전에 반드시 교체해야 합니다.',
         evidence: [
+          {
+            label: '관리자 인증 세션 발급 API (#108)',
+            href: `${petcoupon}/pull/108`,
+            detail: '해시 저장 · 인터셉터 · 메서드 단위 예외',
+          },
+          {
+            label: 'SSE 로그 인증정보 마스킹 강화 (#221)',
+            href: `${petcoupon}/pull/221`,
+          },
           {
             label: '관리자 세션 테스트',
             href: `${petcoupon}/blob/main/src/test/java/com/mycom/petcoupon/global/auth/service/AdminSessionServiceImplTest.java`,
@@ -775,16 +922,16 @@ export const projects: Project[] = [
     kind: 'EXPERIMENT',
     tier: 'experiment',
     typeLabel: 'UBot · 단독 수행',
-    period: '2026.09',
+    period: '2026.09 ~ 2026.10',
     question: '검색 품질이 달라도, 속도를 비교할 수 있을까?',
     description: '같은 검색 품질에서 비교하고, 운영 복잡도까지 따져 고르기',
     role: 'Benchmark harness 설계 · 구현 · 측정 · 분석',
     technologies: ['pgvector', 'Qdrant', 'Milvus', 'Weaviate', 'OpenSearch'],
     highlights: [
-      '5개 DB · 14개 구성 · 620 measurements',
+      '5개 DB · 14개 구성 · 620회 측정',
       'Recall을 먼저 확인하고 지연·처리량 비교',
     ],
-    github: 'https://github.com/ureca-UBot/UBot-VertorDBTest',
+    github: ubotVectorDb,
     overview:
       'RAG 서비스의 Vector DB 후보 5종을 비교한 harness입니다. 합성 1만 청크, 동시성 10, DB별 4 vCPU·8 GiB 조건에서 검색 설정 124개를 5회씩, 총 620회 측정했습니다. 성능은 Qdrant가 가장 좋았지만 팀은 이미 쓰는 PostgreSQL의 pgvector를 선택했습니다.',
     features: [
@@ -809,7 +956,7 @@ export const projects: Project[] = [
         evidence: [
           {
             label: '공정 비교 조건과 산포도',
-            href: 'https://github.com/ureca-UBot/UBot-VertorDBTest/blob/dev/docs/07-results/fairness-v2-results-20260913.md',
+            href: `${ubotVectorDb}/blob/main/docs/07-results/fairness-v2-results-20260913.md`,
             detail: '124개 검색 설정 × 독립 재구축 5회',
           },
         ],
@@ -819,23 +966,54 @@ export const projects: Project[] = [
         brief: {
           plan: '가장 빠른 DB는 Qdrant였지만, 벡터 DB를 따로 두면 운영할 저장소가 하나 늘어납니다.',
           build: [
-            '예상 규모에서 pgvector의 p95가 수십 ms 안인 것을 확인',
+            '측정한 1만 청크에서 pgvector의 p95가 수십 ms 안인 것을 확인',
             '팀은 이미 쓰는 PostgreSQL의 pgvector를 선택',
           ],
           outcome: 'Recall 0.99 이상에서 p95는 Qdrant 4.1ms, pgvector 32.2ms. UBot은 지금도 pgvector를 씁니다.',
         },
         plan: '같은 Recall에서 가장 빠른 DB는 Qdrant였습니다. 하지만 서비스는 이미 PostgreSQL을 쓰고 있어, 벡터 DB를 따로 두면 운영하고 데이터를 맞춰야 할 저장소가 하나 늘어납니다.',
         build:
-          '예상 규모(1천~1만 청크)에서 pgvector의 p95가 수십 ms 안에 머무는 것을 확인했고, 팀은 복잡성을 줄이기 위해 기존 PostgreSQL의 pgvector를 선택했습니다.',
+          '측정한 1만 청크에서 pgvector의 p95가 Recall 0.99 이상에서도 32ms 정도로 수십 ms 안에 머무는 것을 확인했습니다. p50 차이는 2ms 이내였습니다. 팀은 이 차이보다 저장소를 하나 더 운영하는 부담이 크다고 보고, 기존 PostgreSQL의 pgvector를 선택했습니다.',
         outcome:
           'Recall 0.99 이상에서 Qdrant HNSW는 p95 4.1ms · 3,402 QPS, pgvector HNSW는 32.2ms · 1,601 QPS였습니다. Recall 0.95 이상에서는 3.9ms 대 7.3ms였습니다. 합성 1만 청크 · 동시성 10에서 5회 재구축한 중앙값입니다. UBot은 지금도 pgvector를 쓰고 있고, 이후 매장 검색용 PostGIS도 같은 PostgreSQL에 확장으로 붙었습니다.',
         limit:
           '같은 Recall에서 검색 지연은 Qdrant보다 2~8배 깁니다. 데이터가 커지거나 검색 지연이 응답 시간의 병목이 되면 다시 비교합니다.',
         evidence: [
           {
+            label: 'pgvector 선정 결론',
+            href: `${ubotVectorDb}/blob/main/docs/07-results/decision.md`,
+            detail: '같은 Recall에서의 차이와 남은 확인 항목',
+          },
+          {
             label: '124개 설정 수치 부록',
-            href: 'https://github.com/ureca-UBot/UBot-VertorDBTest/blob/dev/docs/07-results/assets/fairness-v2-20260912-1826/parameter-statistics.md',
+            href: `${ubotVectorDb}/blob/main/docs/07-results/assets/fairness-v2-20260912-1826/parameter-statistics.md`,
             detail: 'DB·인덱스·검색 설정별 Recall · p95 · QPS',
+          },
+        ],
+      },
+      {
+        title: '고른 뒤에: 서비스 검색을 exact에서 HNSW로',
+        brief: {
+          plan: '벤치마크로 pgvector를 고른 뒤에도, 서비스의 FAQ 검색은 결과 누락 문제로 exact 검색에 머물러 있었습니다.',
+          build: [
+            'pgvector iterative scan(strict_order, ef_search=200)을 검색 트랜잭션에만 적용',
+            'FAQ별 중복 제거 뒤 topK가 모자라면 후보 범위를 두 배씩 확대',
+            '설정을 켤 때만 도는 벤치마크 테스트 추가',
+          ],
+          outcome: '합성 1만 건에서 p50 4.6~6.2배 개선, 상위 3개 결과는 exact와 같았습니다(#251).',
+        },
+        plan: '벤치마크로 pgvector를 고른 뒤에도 UBot의 FAQ 검색은 exact 검색이었습니다. HNSW에서 필터에 걸린 후보 때문에 결과가 모자라는 문제가 있어 exact로 바꿔 둔 상태였습니다(#182). 필터와 중복 제거를 거쳐도 결과가 모자라지 않게 하면서 HNSW로 되돌리기로 했습니다.',
+        build:
+          'pgvector의 iterative scan(strict_order, ef_search=200)을 검색 트랜잭션에만 적용해, 필터에 걸러진 만큼 후보를 더 탐색하게 했습니다. FAQ별로 중복을 제거한 뒤 topK가 모자라면 후보 범위를 두 배씩 넓힙니다. 성능 측정용 벤치마크 테스트는 설정을 켤 때만 돌게 했습니다.',
+        outcome:
+          '#251이 병합됐습니다. 합성 1만 건에서 p50이 4.6~6.2배 빨라졌고, 상위 3개 결과는 exact 검색과 같았습니다. FAQ 저장소, FAQ 서비스, 상담 테스트 133건이 통과했습니다(PR 기록).',
+        limit:
+          '실제 FAQ 임베딩 기준의 재측정은 하지 않았습니다. 상담 금지 문장 검색은 exact를 유지합니다.',
+        evidence: [
+          {
+            label: 'FAQ 벡터 검색을 HNSW로 전환 (UBot #251)',
+            href: `${ubotBe}/pull/251`,
+            detail: 'iterative scan · 후보 범위 확대 · exact와 상위 3개 비교',
           },
         ],
       },
@@ -857,17 +1035,17 @@ export const projects: Project[] = [
         evidence: [
           {
             label: '변동성·warning·해석 제한',
-            href: 'https://github.com/ureca-UBot/UBot-VertorDBTest/blob/dev/docs/07-results/fairness-v2-results-20260913.md',
+            href: `${ubotVectorDb}/blob/main/docs/07-results/fairness-v2-results-20260913.md`,
           },
         ],
       },
     ],
     limitations:
-      '합성 1만 청크 · Top-10 · 동시성 10 조건의 결과입니다. 실제 서비스 데이터와 1천 청크 규모는 측정하지 않았고, 실데이터에서 pgvector의 검색 품질을 확인하는 것이 다음 단계입니다.',
+      '합성 1만 청크 · Top-10 · 동시성 10 조건의 결과입니다. 실제 서비스 데이터와 1천 청크 규모는 측정하지 않았고, 실데이터에서 pgvector의 검색 품질을 확인하는 것이 다음 단계입니다. 벤치마크의 pgvector 조건(Top-10, ef_construction 128, 인덱스 사용 강제)은 UBot의 실제 설정(Top-3, 기본 파라미터)과 다릅니다.',
     proofs: [
       {
         label: '620회 측정 보고서',
-        href: 'https://github.com/ureca-UBot/UBot-VertorDBTest/blob/dev/docs/07-results/fairness-v2-results-20260913.md',
+        href: `${ubotVectorDb}/blob/main/docs/07-results/fairness-v2-results-20260913.md`,
         detail: '검색 품질·지연·처리량과 반복 측정의 변동성',
       },
     ],
@@ -888,10 +1066,11 @@ export const projects: Project[] = [
     highlights: [
       '엔진 4종 × 로컬·T4·L4, 기준선은 초당 8건 완료',
       '엔진을 바꿀 때마다 GPU 메모리가 비었는지 확인',
+      '임베딩 서빙은 Ollama와 vLLM을 2,560건으로 따로 비교',
     ],
     github: 'https://github.com/ureca-UBot/UBot-LLMTest',
     overview:
-      'UBot의 LLM을 어떤 엔진과 GPU로 띄울지 정하려는 실험입니다. 엔진 4종(Ollama, llama.cpp, vLLM, SGLang)을 로컬 RTX 3060, AWS T4, L4에서 비교했고 기준선은 HTTP 완료 초당 8건입니다. 모든 결과는 반복 검증 전의 탐색 결과입니다.',
+      'UBot의 LLM을 어떤 엔진과 GPU로 띄울지 정하려는 실험입니다. 엔진 4종(Ollama, llama.cpp, vLLM, SGLang)을 로컬 RTX 3060, AWS T4, L4에서 비교했고 기준선은 HTTP 완료 초당 8건입니다. 같은 조건으로 다른 모델 4종과 임베딩 모델(BGE-M3)의 서빙 엔진도 따로 비교했습니다. 모든 결과는 반복 검증 전의 탐색 결과입니다.',
     features: [
       {
         title: '기준선부터: 왜 초당 8건인가',
@@ -916,7 +1095,7 @@ export const projects: Project[] = [
         brief: {
           plan: '엔진을 내려도 GPU 메모리가 한동안 남아, 그대로 다음 엔진을 재면 결과가 섞입니다.',
           build: [
-            '설정이 끝날 때마다 컨테이너를 지우고 GPU 메모리가 비었는지 확인',
+            '설정이 끝날 때마다 컨테이너를 지우고 GPU 메모리 0 MiB를 연속 3회 확인',
             '외부 동시 요청 수와 엔진 내부 상한을 구분해 기록',
             '질문 6개 유형 비율을 유지한 300개 질문으로도 측정',
           ],
@@ -924,12 +1103,17 @@ export const projects: Project[] = [
         },
         plan: 'GPU 하나에서 여러 엔진을 동시에 띄울 수 없어 하나씩 켜고 끄며 재야 했습니다. Ollama에서 엔진을 내려도 GPU 메모리가 한동안 남아 있는 것을 직접 봤고, 그대로 다음 테스트를 시작하면 결과에 영향을 줄 것이라고 판단했습니다.',
         build:
-          '설정이 끝날 때마다 컨테이너를 지우고 GPU 메모리가 비었는지 확인한 뒤 다음 설정을 시작하게 했습니다. 외부 동시 요청 수와 엔진 내부 처리 상한을 구분해 기록했고, 실패한 요청도 빼지 않고 남겼습니다. 같은 질문만 보내면 처리량이 왜곡된다고 보고, 기존 질문셋의 6개 유형 비율을 유지한 채 유형당 50개(총 300개)로 줄인 질문으로도 측정했습니다.',
+          '설정이 끝날 때마다 컨테이너를 지우고, 같은 GPU에서 메모리 0 MiB와 실행 중인 프로세스 없음을 연속 3회 확인한 뒤 다음 설정을 시작하게 했습니다. 외부 동시 요청 수와 엔진 내부 처리 상한을 구분해 기록했고, 실패한 요청도 빼지 않고 남겼습니다. 같은 질문만 보내면 처리량이 왜곡된다고 보고, 기존 질문셋의 6개 유형 비율을 유지한 채 유형당 50개(총 300개)로 줄인 질문으로도 측정했습니다.',
         outcome:
           'L4에서 vLLM 9.13, SGLang 8.17로 기준선을 넘는 것을 관측했고, 다양화한 질문에서도 9.03과 8.77이었습니다. T4에서는 1.97과 1.93, Ollama와 llama.cpp는 L4에서도 2.67 이하였습니다.',
         limit:
-          'T4와 L4는 GPU 말고 CPU와 RAM도 달라 GPU만의 비교가 아닙니다. 지연, 실패율, 답변 품질의 합격 기준은 적용하지 않았습니다. 질문셋은 팀원이 만든 것을 줄여 썼습니다.',
+          'T4와 L4는 GPU 말고 CPU와 RAM도 달라 GPU만의 비교가 아닙니다. 지연, 실패율, 답변 품질의 합격 기준은 적용하지 않았습니다. llama.cpp는 재사용 소켓 실패(socket hang up)가 섞여 있어 그 값을 계산 성능의 한계로 보지 않습니다. 질문셋은 팀원이 만든 것을 줄여 썼습니다.',
         evidence: [
+          {
+            label: '실험 전체 결론',
+            href: 'https://github.com/ureca-UBot/UBot-LLMTest/blob/main/servingtest/docs/CONCLUSIONS.md',
+            detail: '환경별 결과 · 상한 확대 · 질문 다양화 · 메모리 정리 기준',
+          },
           {
             label: '서빙 엔진 비교 실험 (LLMTest #6)',
             href: 'https://github.com/ureca-UBot/UBot-LLMTest/pull/6',
@@ -952,14 +1136,84 @@ export const projects: Project[] = [
           '상한 64에서 vLLM 9.97, SGLang 8.77로 올랐지만 128에서는 8.23과 8.43으로 오히려 낮아졌습니다.',
         limit: '설정별 탐색 측정이며 반복 검증 전입니다.',
       },
+      {
+        title: '빠르다고 고르지 않았다: 모델 4종 추가 측정',
+        brief: {
+          plan: 'Qwen3-4B로 기준선을 넘었지만, 더 크거나 다른 계열의 모델로도 넘는지 알아야 했습니다.',
+          build: [
+            'Qwen3-8B·14B, EXAONE 3.5 7.8B, Gemma3 4B를 같은 부하 조건으로 L4와 로컬에서 측정',
+            '받은 가중치는 Hugging Face에 등록된 SHA-256과 대조',
+            '처리량과 함께 출력 길이를 보고, 튀는 결과는 비양자화 모델과 대조',
+          ],
+          outcome: '공식 가중치로 기준선을 넘은 것은 Qwen3-4B뿐. 20.57이 나온 Gemma3 변환본은 답이 짧고 상태값이 62%만 일치해 뺐습니다.',
+        },
+        plan: 'Qwen3-4B로 기준선을 넘었지만, 더 큰 모델이나 다른 계열에서도 넘는지 알아야 모델을 고를 수 있었습니다.',
+        build:
+          'Qwen3-8B, Qwen3-14B, EXAONE 3.5 7.8B, Gemma3 4B를 Qwen3-4B와 같은 부하 조건(300문항, context 4096, 출력 상한 512, 30초 창)으로 L4와 로컬 RTX 3060에서 쟀습니다. 받은 가중치는 Hugging Face에 등록된 SHA-256과 대조했고, 엔진을 바꿀 때마다 GPU 메모리 0 MiB를 연속 3회 확인했습니다. 처리량만 보지 않고 평균 출력 길이와 응답 형식도 함께 봤고, 유독 빠른 결과는 같은 문항에서 비양자화 모델과 응답 상태값을 대조했습니다.',
+        outcome:
+          'L4에서 공식 가중치로 기준선을 넘은 것은 Qwen3-4B뿐이었습니다. Qwen3-8B와 EXAONE 3.5 7.8B는 내부 상한을 32에서 64로 올려도 6.5건 근처에서 멈추고 지연만 길어졌고(Qwen3-8B p95 8.6초 → 14.5초), Qwen3-14B는 3.33건이었습니다. Gemma3 4B 커뮤니티 AWQ 변환본은 vLLM에서 20.57건으로 가장 빨랐지만, 평균 출력이 61토큰으로 짧고 비양자화 모델과 응답 상태값이 62%만 일치했으며 되물어야 할 질문을 단정하는 경향이 있어 후보에서 뺐습니다.',
+        limit:
+          '30초 창 한 번의 탐색이고 의미 정답률은 확인하지 않았습니다. 모델마다 크기, 가중치 형식, 출력 길이가 달라 같은 조건의 우열 비교가 아닙니다. Qwen3-4B 값은 다른 날의 GPU 세션에서 잰 것입니다.',
+        evidence: [
+          {
+            label: 'L4 모델 확장 결과와 한계',
+            href: 'https://github.com/ureca-UBot/UBot-LLMTest/blob/main/servingtest/l4/reports/L4_MULTIMODEL_RESULTS_20261006.md',
+            detail: '모델 4종 · 설정별 최고 RPS · 가중치 대조',
+          },
+          {
+            label: '모델 확장 측정 (LLMTest #8)',
+            href: 'https://github.com/ureca-UBot/UBot-LLMTest/pull/8',
+          },
+        ],
+      },
+      {
+        title: '임베딩 서버도 따로 재 보기',
+        brief: {
+          plan: '질문마다 임베딩을 먼저 만들기 때문에, 답변 모델과 별개로 임베딩 서버의 엔진도 정해야 했습니다.',
+          build: [
+            'BGE-M3를 Ollama와 vLLM으로 띄워 질문 묶음 4종 × 동시성 5단계 × 64건',
+            '처리량, p50·p95·p99, 실패와 함께 Top-1 일치와 최소 cosine 기록',
+            'Ollama·TEI·vLLM 탐색에서는 기준 벡터와 일치하는지 먼저 확인',
+          ],
+          outcome: '2,560건 실패 0건. 동시성 32에서 vLLM 처리량이 Ollama의 2.98~3.73배였습니다.',
+        },
+        plan: '질문이 들어오면 FAQ 검색을 위해 임베딩부터 만듭니다. 답변 모델과 별개로 임베딩 서버를 어떤 엔진으로 띄울지 정해야 했고, 엔진이 달라도 같은 벡터를 내는지 확인해야 했습니다.',
+        build:
+          'BGE-M3를 Ollama와 vLLM으로 띄우고, 서로 다른 질문 묶음 4종을 동시성 1, 4, 8, 16, 32에서 구간마다 64건씩 보냈습니다(40개 구간, 2,560건). 처리량과 p50·p95·p99 지연, 성공과 실패를 기록하고, 결과 벡터가 맞는지 Top-1 일치와 최소 cosine도 함께 남겼습니다. 별도 탐색에서는 Ollama, TEI, vLLM을 동시성 5단계와 요청당 문장 수 3가지로 나눠 15개 구간씩 실행하고, 기준 벡터와 일치하는지부터 확인했습니다.',
+        outcome:
+          '2,560건 모두 성공했습니다. 동시성 32의 처리량은 질문 묶음에 따라 Ollama 33.20~60.76 RPS, vLLM 116.42~226.68 RPS로 vLLM이 2.98~3.73배였습니다. 탐색에서는 Ollama가 기준 벡터 일치 조건을 통과하지 못했고 TEI와 vLLM은 통과했습니다. UBot은 AI_MODE=vllm으로 vLLM 임베딩 서버를 쓸 수 있게 했고, FAQ 1,024건 백필은 로컬에서 Ollama 약 80초, vLLM 약 24초였습니다.',
+        limit:
+          'Ollama와 vLLM의 모델 형식과 정밀도가 같지 않아 이 배율을 엔진 하나만의 효과로 보지 않습니다. 짧은 HTTP 임베딩 부하 진단이고 구간별 1회 측정이라, RAG 전체 응답 시간이나 장시간 처리량은 재지 않았습니다. 당시 실행기는 비공개 입력과 묶여 있어 측정 JSON만 보존했습니다.',
+        evidence: [
+          {
+            label: '임베딩 서빙 엔진 비교 (UBot-EmbeddingTest)',
+            href: 'https://github.com/ureca-UBot/UBot-EmbeddingTest/blob/main/serving-benchmark/README.md',
+            detail: 'Ollama · vLLM 2,560건 · Ollama · TEI · vLLM 탐색',
+          },
+          {
+            label: '원본 측정값 (JSON)',
+            href: 'https://github.com/ureca-UBot/UBot-EmbeddingTest/blob/main/serving-benchmark/results/ollama-vllm-load-metrics.json',
+          },
+        ],
+      },
     ],
     limitations:
       '모든 결과는 탐색 결과이며 반복 검증 전입니다. "초당 8건을 감당한다"가 아니라 "초당 8건 완료를 관측했다"는 뜻입니다. 환경별 최고값은 외부 동시 요청 수가 달라 같은 부하점의 비교가 아닙니다.',
     proofs: [
       {
+        label: '실험 전체 결론',
+        href: 'https://github.com/ureca-UBot/UBot-LLMTest/blob/main/servingtest/docs/CONCLUSIONS.md',
+        detail: '엔진 4종 · 세 환경 · 모델 확장까지의 결론과 한계',
+      },
+      {
         label: '서빙 엔진 비교 실험 PR',
         href: 'https://github.com/ureca-UBot/UBot-LLMTest/pull/6',
-        detail: '측정 조건과 결론 문서',
+        detail: '측정 스크립트와 원시 결과',
+      },
+      {
+        label: '임베딩 서빙 엔진 비교',
+        href: 'https://github.com/ureca-UBot/UBot-EmbeddingTest/blob/main/serving-benchmark/README.md',
+        detail: 'BGE-M3 · Ollama와 vLLM · 2,560건',
       },
       {
         label: 'GPU 테스트 서버 Terraform 구성',
@@ -1083,9 +1337,9 @@ export const heroProofs = [
   },
   {
     projectId: 'ubot',
-    value: '29',
+    value: '49',
     unit: '개 PR',
-    label: 'UBot 백엔드 21 · 프론트 8 병합',
+    label: 'UBot 백엔드 34 · 프론트 15 병합',
   },
 ]
 
@@ -1105,7 +1359,7 @@ export const focusAreas: {
     title: 'Failure Handling',
     description: '비동기 처리 · 장애 복구 · SSE',
     icon: 'activity',
-    projectIds: ['petcoupon', 'engineering-memory'],
+    projectIds: ['ubot', 'petcoupon', 'engineering-memory'],
   },
   {
     title: 'Verification',
@@ -1115,7 +1369,7 @@ export const focusAreas: {
   },
   {
     title: 'Backend Infrastructure',
-    description: 'Docker · Nginx · CI/CD · 모델 서빙',
+    description: 'AWS · Terraform · CI/CD · 모니터링',
     icon: 'layers',
     projectIds: ['ubot', 'engineering-memory'],
   },
@@ -1132,7 +1386,31 @@ export const troubleshooting: {
   cause: string
   fix: string
   check: string
+  /** 대표 사례. 첫 화면과 상세 페이지에서 카드로 보이고, 나머지는 접힌 목록에 둡니다. */
+  featured?: boolean
+  evidence?: EvidenceLink[]
 }[] = [
+  {
+    projectId: 'ubot',
+    label: 'LOAD TEST · AWS',
+    title: '6,000건을 보내자 1,235건이 시스템 오류였다',
+    summary: '대기 한도, 모델 컨텍스트, Nginx 연결 수를 차례로 고쳐 오류를 4건으로 줄였습니다.',
+    symptom:
+      '실서비스 주소로 질문 6,000건을 보내자 시스템 오류가 1,235건 나왔습니다. 고친 뒤 다시 보낸 3,000건에서는 502가 2,499건이었습니다.',
+    cause:
+      '대기·실행 한도 초과(CHAT-016)와 모델 컨텍스트 초과(LLM-003)가 대부분이었습니다. 출력 검사가 입력 3,073토큰 이상에 출력 1,024토큰을 예약해 한도 4,096을 넘었고, 재시험에서는 Nginx 연결 한도 512가 고갈됐습니다.',
+    fix: '대기·실행 한도를 1시간·10분으로, 모델 컨텍스트와 Nginx 연결 수를 각각 8,192로 올렸습니다. 기존 AMI로 뜨는 Spot GPU도 같은 값으로 기동하게 Terraform을 고쳤습니다.',
+    check:
+      '3,000건씩 두 번 다시 보내 답변 5,666건, 정상 거절 330건, 시스템 오류 4건. 작업 ID 6,000개를 DB와 대조해 불일치 0건이었습니다.',
+    featured: true,
+    evidence: [
+      {
+        label: '재시험 기록',
+        href: `${ubotServerTest}/blob/main/chat-e2e/results/20261026-aws/README.md`,
+      },
+      { label: 'PR #318', href: `${ubotBe}/pull/318` },
+    ],
+  },
   {
     projectId: 'petcoupon',
     label: 'SSE MONITORING',
@@ -1145,18 +1423,8 @@ export const troubleshooting: {
     fix: '큐를 1,000개에서 50개로 줄이고, 가득 차면 오래된 로그를 버리고 개수만 알리게 했습니다. 자기 로그 재수집을 막고 큐 앞에 게이트를 두었습니다.',
     check:
       '로컬에서 연결을 62번 강제로 끊어도 같은 예외 0건, 남은 구독 0개 (PR 기록).',
-  },
-  {
-    projectId: 'ubot',
-    label: 'DEPLOYMENT',
-    title: '배포할 때마다 502가 났다',
-    summary: '원인이 세 겹이라, 점검 단계를 넣어 하나씩 지웠습니다.',
-    symptom: '수동 CD로 EC2에 배포하자 502 Bad Gateway가 30번 넘게 반복됐습니다.',
-    cause:
-      '원인이 하나가 아니었습니다. SSH 키, 고정 컨테이너 이름 충돌, 그리고 Compose 프로젝트 이름이 달라 서비스끼리 서로를 찾지 못했습니다.',
-    fix: '배포 전 점검 단계를 넣어 어디서 막히는지부터 드러냈습니다. 고정 이름을 없애고 프로젝트 이름을 통일했으며, 백엔드를 바꾼 뒤 Nginx를 다시 만들도록 순서를 고쳤습니다.',
-    check:
-      'PR에 수동 CD 성공과 /actuator/health UP을 기록했고, 점검 단계는 워크플로에 남겼습니다.',
+    featured: true,
+    evidence: [{ label: 'PR #192', href: `${petcoupon}/pull/192` }],
   },
   {
     projectId: 'concurrency',
@@ -1170,6 +1438,168 @@ export const troubleshooting: {
     fix: 'WATCH만 단독으로 다시 돌리고 Redis 포트를 바꿔 이전 실행의 영향을 배제했습니다. 성능 비교에서는 이 전략을 제외했습니다.',
     check:
       'VU 10, 50, 100, 200 모두에서 재현했습니다. 연결 재사용을 고친 뒤의 재측정은 남은 과제입니다.',
+    featured: true,
+    evidence: [
+      {
+        label: '재현 기록',
+        href: 'https://github.com/Catverdose/concurrency-strategies/blob/main/docs/03-vu-scaling.md',
+      },
+    ],
+  },
+  {
+    projectId: 'ubot',
+    label: 'WORKER RECOVERY',
+    title: '배포가 실패하자 답할 Worker가 사라졌다',
+    summary: '배포와 독립된 타이머가 같은 이미지로 Worker를 되살리게 했습니다.',
+    symptom:
+      'CD가 Worker를 멈춘 뒤 실패하면, API는 질문을 계속 접수하는데 답변을 만들 Worker가 남지 않았습니다.',
+    cause:
+      'Worker를 다시 띄우는 일을 배포 스크립트에만 맡기고 있어, 스크립트가 중간에 끊기면 되돌릴 주체가 없었습니다.',
+    fix: 'SSM·Worker와 독립된 systemd 타이머가 30초마다 확인하고, API가 정상이면 같은 이미지 digest로 Worker를 복구합니다. 배포 중·점검 중·API 비정상일 때는 복구를 보류하고, 배포 스크립트에 시간 제한을 걸었습니다.',
+    check:
+      '로컬 Linux에서 배포 스크립트를 Worker 정지 직후 SIGKILL해 복구를 확인했습니다. AWS에는 타이머를 설치해 신규 질문 성공까지 확인했고, 강제 종료 시험은 AWS에서 하지 않았습니다.',
+    evidence: [{ label: 'PR #318', href: `${ubotBe}/pull/318` }],
+  },
+  {
+    projectId: 'ubot',
+    label: 'VECTOR SEARCH',
+    title: 'HNSW로 찾으면 맞는 FAQ가 빠졌다',
+    summary: 'exact 검색으로 물러났다가, iterative scan으로 HNSW에 돌아왔습니다.',
+    symptom:
+      'FAQ 검색에 HNSW 인덱스를 쓰자 조건에 맞는 FAQ가 결과에서 빠지는 일이 있어, 한동안 전체 비교(exact)로 바꿨습니다.',
+    cause:
+      '인덱스가 후보 40개(ef_search 기본값)를 먼저 고른 뒤 임베딩 프로필·벡터 유형 조건을 적용해, 조건에 맞는 벡터가 후보 밖에 있으면 놓쳤습니다.',
+    fix: 'pgvector 0.8의 iterative scan(strict_order, ef_search 200)을 검색 트랜잭션에만 켜고, FAQ별 중복을 지운 뒤 topK가 모자라면 후보를 두 배씩 늘렸습니다.',
+    check:
+      '합성 1만 건에서 p50 28.82ms → 4.66ms, 상위 3개 결과는 exact와 같았습니다. 1천 건에서는 오히려 느려 금지 문장 검색은 exact로 두었고, 실제 FAQ 임베딩 재측정은 남았습니다.',
+    evidence: [
+      { label: 'PR #182', href: `${ubotBe}/pull/182` },
+      { label: 'PR #251', href: `${ubotBe}/pull/251` },
+    ],
+  },
+  {
+    projectId: 'ubot',
+    label: 'MANUAL CD',
+    title: '배포할 때마다 502가 났다',
+    summary: '원인이 세 겹이라, 점검 단계를 넣어 하나씩 지웠습니다.',
+    symptom: '수동 CD로 EC2에 배포하자 502 Bad Gateway가 30번 넘게 반복됐습니다.',
+    cause:
+      '원인이 하나가 아니었습니다. SSH 키, 고정 컨테이너 이름 충돌, 그리고 Compose 프로젝트 이름이 달라 서비스끼리 서로를 찾지 못했습니다.',
+    fix: '배포 전 점검 단계를 넣어 어디서 막히는지부터 드러냈습니다. 고정 이름을 없애고 프로젝트 이름을 통일했으며, 백엔드를 바꾼 뒤 Nginx를 다시 만들도록 순서를 고쳤습니다.',
+    check:
+      'PR에 수동 CD 성공과 /actuator/health UP을 기록했고, 점검 단계는 워크플로에 남겼습니다.',
+    evidence: [
+      { label: 'PR #77', href: `${ubotBe}/pull/77` },
+      { label: 'PR #88', href: `${ubotBe}/pull/88` },
+    ],
+  },
+  {
+    projectId: 'ubot',
+    label: 'NGINX',
+    title: '/.env를 요청해도 화면이 내려왔다',
+    summary: '숨김 파일 경로는 SPA로 넘기지 않고 404로 끊었습니다.',
+    symptom:
+      '프론트 서버에 /.env, /.git 같은 경로를 요청하면 404가 아니라 SPA 화면이 정상 응답으로 돌아왔습니다.',
+    cause:
+      '모든 경로를 index.html로 넘기는 try_files 규칙만 있고, 숨김 파일을 막는 규칙이 없었습니다. 배포 폴더에 그런 파일이 생기면 그대로 내려갈 구조였습니다.',
+    fix: '인증서 갱신에 쓰는 .well-known만 남기고 점으로 시작하는 경로를 모두 404로 막았습니다. SSM으로 서버에 적용하고 저장소의 설정 파일에도 같은 규칙을 넣었습니다.',
+    check: '환경 파일 경로는 404, 홈은 200으로 응답하는 것을 확인했습니다.',
+    evidence: [{ label: 'FE PR #77', href: `${ubotFe}/pull/77` }],
+  },
+  {
+    projectId: 'ubot',
+    label: 'CI/CD',
+    title: '배포할 때마다 상담 화면이 다시 꺼졌다',
+    summary: '빈 변수가 기본값 false로 빌드되던 것을 바로잡았습니다.',
+    symptom:
+      '상담 기능을 켜 두어도 develop에 변경이 합쳐져 자동 배포가 돌면 상담 화면이 다시 꺼졌습니다.',
+    cause:
+      'GitHub Actions 변수가 비어 있으면 워크플로가 상담 설정을 기본값 false로 빌드했습니다.',
+    fix: '변수를 true로 설정하고 워크플로의 기본값도 true로 바꿨습니다. 자동 CI/CD 대상도 develop으로 정리했습니다.',
+    check:
+      '설정을 반영한 AWS FE 배포가 성공했고, 실제 서비스에서 상담이 켜진 것을 확인했습니다.',
+    evidence: [{ label: 'FE PR #76', href: `${ubotFe}/pull/76` }],
+  },
+  {
+    projectId: 'petcoupon',
+    label: 'SSE AUTH',
+    title: '세션이 만료되면 401 대신 500이 나갔다',
+    summary: '오류 응답의 형식을 한 곳에서 고정해 상태 코드를 살렸습니다.',
+    symptom:
+      '관리자 SSE 스트림에서 401·404·405가 전부 500으로 바뀌었습니다. 세션이 만료되면 프론트가 500을 재시도 대상으로 보고 끝없이 다시 연결할 수 있었습니다.',
+    cause:
+      'fetch 기반 SSE 클라이언트는 항상 Accept: text/event-stream을 보냅니다. 예외가 나면 Spring이 이 헤더로 JSON 응답을 협상하다 실패해, 원래 예외를 500으로 다시 던졌습니다.',
+    fix: '오류 응답 생성을 헬퍼 하나로 모으고 Content-Type을 JSON으로 고정했습니다. 프론트에는 401을 재시도하지 않도록 연동 조건을 남겼습니다.',
+    check: '인증 테스트 5건으로 401·405·500·503이 각각 제 코드로 나가는 것을 확인했습니다.',
+    evidence: [{ label: 'PR #179', href: `${petcoupon}/pull/179` }],
+  },
+  {
+    projectId: 'petcoupon',
+    label: 'LOG MASKING',
+    title: '긴 로그 한 줄에 마스킹이 4.7초 걸렸다',
+    summary: '정규식이 검사할 길이를 2,048자로 묶어 최악의 경우를 약 3ms로 줄였습니다.',
+    symptom:
+      'SQL을 가리는 마스킹 정규식이 로그 길이에 따라 급격히 느려졌습니다. 10KB 46ms, 50KB 1.1초, 100KB 4.7초를 측정했습니다.',
+    cause:
+      '.+? 패턴이 매칭에 실패하면 입력 길이의 제곱만큼 비용이 듭니다. 이 비용은 로그를 남긴 요청 스레드가 내고, 하필 WARN/ERROR가 쏟아지는 장애 때 커집니다.',
+    fix: '검사 구간을 2,048자로 잘랐습니다. 화면에 내보내는 길이(500자)가 검사 구간보다 짧아, 내보내는 내용은 항상 검사를 거칩니다.',
+    check: '최악의 경우를 약 3ms로 묶었고, 이 상한을 확인하는 테스트를 남겼습니다.',
+    evidence: [{ label: 'PR #179', href: `${petcoupon}/pull/179` }],
+  },
+  {
+    projectId: 'petcoupon',
+    label: 'FLAKY TEST',
+    title: '테스트가 실행할 때마다 다른 곳에서 깨졌다',
+    summary: '테스트 중에도 돌던 스케줄러를 설정으로 끌 수 있게 했습니다.',
+    symptom:
+      '같은 MySQL을 쓰는 통합 테스트가 실행할 때마다 다른 지점에서 외래키 오류로 실패했습니다.',
+    cause:
+      '@SpringBootTest가 함께 띄운 이벤트 스케줄러가 매분 상태 이력을 썼고, 그 사이 다른 테스트가 이벤트를 지우다 외래키에 걸렸습니다.',
+    fix: '스케줄러 두 개에 켜고 끄는 설정을 달았습니다. cron 주기를 늘리는 방법은 정각을 걸칠 때만 실패하는, 재현되지 않는 문제로 바뀌어 택하지 않았습니다.',
+    check:
+      '조건을 일부러 지우면 가드 테스트 하나만 실패하고 되돌리면 통과했습니다. 설정이 없을 때 켜져 있는지도 따로 검증합니다.',
+    evidence: [{ label: 'PR #101', href: `${petcoupon}/pull/101` }],
+  },
+  {
+    projectId: 'petcoupon',
+    label: 'SCHEDULER',
+    title: '예외 한 번이면 상태 전이가 영원히 멈췄다',
+    summary: '스케줄 작업을 통째로 감싸 다음 주기에 다시 돌게 했습니다.',
+    symptom:
+      'scheduleAtFixedRate로 등록한 쿠폰 상태 전이가 예외를 한 번 던지면, 이후 실행이 모두 멈추는 구조였습니다.',
+    cause:
+      'ScheduledExecutorService는 작업이 예외로 끝나면 다음 실행을 예약하지 않습니다. 커넥션 획득이나 커밋처럼 트랜잭션 경계에서 나는 예외도 여기에 해당했습니다.',
+    fix: '@Transactional 메서드 바깥에서 작업 전체를 catch(Throwable)로 감싸, 실패해도 다음 주기가 이어지게 했습니다.',
+    check:
+      '서비스가 매번 예외를 던져도 다음 주기에 다시 실행되는지 회귀 테스트로 고정했습니다. 감싸기를 되돌리면 이 테스트가 실패합니다.',
+    evidence: [{ label: 'PR #74', href: `${petcoupon}/pull/74` }],
+  },
+  {
+    projectId: 'petcoupon',
+    label: 'JPA',
+    title: '발급이 확정돼도 갱신 시각이 그대로였다',
+    summary: '벌크 UPDATE가 감사 필드를 건너뛰는 것을 찾아 한 줄로 고쳤습니다.',
+    symptom:
+      '발급이 확정돼 재고가 줄어도 coupon_stock.updated_at은 쿠폰을 만든 시각에 머물렀습니다. 그래서 관리자 목록에서 이 값을 빼 두고 있었습니다.',
+    cause:
+      '@Modifying 벌크 UPDATE는 영속성 컨텍스트를 거치지 않아 @LastModifiedDate가 적용되지 않았습니다.',
+    fix: '같은 UPDATE 문에서 updated_at도 CURRENT_TIMESTAMP로 바꾸게 했습니다. 발급 확정 트랜잭션의 시그니처는 그대로 두었습니다.',
+    check:
+      '실제 MySQL로 갱신을 확인하고, 재고가 0이라 UPDATE가 걸리지 않은 경우에는 시각이 바뀌지 않는 것도 따로 확인했습니다.',
+    evidence: [{ label: 'PR #147', href: `${petcoupon}/pull/147` }],
+  },
+  {
+    projectId: 'petcoupon',
+    label: 'CONCURRENCY',
+    title: '쿠폰 수정이 발급 결과를 덮어쓸 수 있었다',
+    summary: '두 행을 발급과 같은 순서로 잠그고, 바꾼 컬럼만 쓰게 했습니다.',
+    symptom:
+      '관리자 쿠폰 수정이 스케줄러·발급과 겹치면, 스케줄러가 바꾼 ACTIVE가 READY로 돌아가거나 발급 수량이 0으로 덮어써져 초과 발급이 생길 수 있었습니다.',
+    cause:
+      '더티체킹 UPDATE는 바꾸지 않은 컬럼까지 모두 씁니다. 수정을 시작할 때 읽은 낡은 값이 커밋 때 그대로 저장됐습니다.',
+    fix: 'coupon과 coupon_stock을 PESSIMISTIC_WRITE로 잠그고 @DynamicUpdate로 바꾼 컬럼만 쓰게 했습니다. 잠금 순서는 발급 경로와 같은 coupon → coupon_stock으로 맞춰 교착을 피했습니다.',
+    check: '테스트 34개를 추가했고 전체 211개가 통과했습니다.',
+    evidence: [{ label: 'PR #87', href: `${petcoupon}/pull/87` }],
   },
 ]
 
@@ -1191,9 +1621,9 @@ export const collaboration: {
   },
   {
     title: '코드 리뷰와 이슈',
-    summary: '팀원 PR 13건 리뷰, 이슈 14건 등록.',
-    body: 'UBot에서 팀원 PR 13건을 리뷰하고 이슈 14건을 등록했습니다.',
-    meta: '2026-09-28 집계',
+    summary: '팀원 PR 49건 리뷰, 이슈 43건 등록.',
+    body: 'UBot에서 팀원 PR 49건을 리뷰하고 이슈 43건을 등록했습니다.',
+    meta: '2026-10-28 집계',
     projectId: 'ubot',
   },
   {
@@ -1230,7 +1660,7 @@ export const concurrencyResults = [
   ['REDIS_LUA', '9,998', '일시 SOLD_OUT 13건', '일치', '실패'],
   ['REDIS_LOCK', '10,000', '품절 9 / 내부 오류 312건', '일치', '실패'],
   ['OPTIMISTIC', '9,999', '내부 오류 14건', '일치', '실패'],
-  ['REDIS_WATCH', '945', '전송 실패 27,000건', '일치', '실패'],
+  ['REDIS_WATCH', '945', '무응답 27,000건', '일치', '실패'],
 ]
 
 /** LLM 서빙 실험. HTTP 완료 RPS, 기준선 8. 탐색 결과입니다. */
@@ -1242,7 +1672,7 @@ export const servingRun = {
 }
 
 export const servingResults = [
-  ['로컬 RTX 3060', '기준 미달', '기준 미달', '미달'],
+  ['로컬 RTX 3060', '3.80', '4.40', '미달'],
   ['AWS T4', '1.97', '1.93', '미달'],
   ['AWS L4', '9.13', '8.17', '통과'],
   ['AWS L4 · 내부 상한 64', '9.97', '8.77', '통과'],
@@ -1268,7 +1698,7 @@ export const stack: {
         projectId: 'petcoupon',
       },
       {
-        text: 'LLM과 임베딩 서버 전환 구조, 두 구현체 공통 계약 테스트',
+        text: '202 접수와 Worker 분리, heartbeat·펜싱·커밋 후 ACK',
         projectId: 'ubot',
       },
       {
@@ -1299,14 +1729,22 @@ export const stack: {
   {
     category: 'Infrastructure',
     primary: [],
-    used: ['Docker', 'Nginx', 'GitHub Actions', 'AWS EC2', 'Terraform', 'GCP'],
+    used: [
+      'Docker',
+      'Nginx',
+      'GitHub Actions',
+      'AWS EC2',
+      'Terraform',
+      'Prometheus',
+      'GCP',
+    ],
     uses: [
       {
-        text: '멀티스테이지 이미지, 배포 Compose, Nginx 리버스 프록시',
+        text: 'Terraform으로 VPC부터 Spot GPU ASG까지, OIDC → ECR → SSM 배포',
         projectId: 'ubot',
       },
       {
-        text: 'GitHub Actions 수동 CD로 EC2 배포, Terraform GPU 테스트 서버',
+        text: 'Prometheus 지표와 Alertmanager 알림, 배포 실패 뒤 Worker 자동 복구',
         projectId: 'ubot',
       },
       {
@@ -1348,7 +1786,7 @@ export const stack: {
         projectId: 'vector-db-benchmark',
       },
       {
-        text: '로컬과 CI가 같은 DB 이미지를 쓰는 통합 테스트',
+        text: 'AWS 6,000건 재시험과 장애 4종 주입, 작업 ID를 DB와 대조',
         projectId: 'ubot',
       },
     ],
@@ -1359,7 +1797,7 @@ export const stack: {
     used: ['React', 'TypeScript', 'Vite'],
     uses: [
       {
-        text: '금지어, 상품 4종 관리 화면과 토큰 재발급 요청 공유',
+        text: '작업 상태 폴링과 백오프, 동시 401에도 토큰 재발급은 한 번',
         projectId: 'ubot',
       },
       {

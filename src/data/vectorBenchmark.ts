@@ -3,9 +3,9 @@
 // Recall = 5-build mean, p95 and QPS = 5-build medians. Values use source table precision.
 // Source Git blob: 518d0709c263359f4a49d3a7b6f36d9aeaaf9b60
 export const benchmarkSource =
-  'https://github.com/ureca-UBot/UBot-VertorDBTest/blob/dev/docs/07-results/assets/fairness-v2-20260912-1826/parameter-statistics.md'
+  'https://github.com/ureca-UBot/UBot-VectorDBTest/blob/main/docs/07-results/assets/fairness-v2-20260912-1826/parameter-statistics.md'
 export const benchmarkReport =
-  'https://github.com/ureca-UBot/UBot-VertorDBTest/blob/dev/docs/07-results/fairness-v2-results-20260913.md'
+  'https://github.com/ureca-UBot/UBot-VectorDBTest/blob/main/docs/07-results/fairness-v2-results-20260913.md'
 
 export type BenchmarkDatabase =
   'milvus' | 'opensearch' | 'pgvector' | 'qdrant' | 'weaviate'

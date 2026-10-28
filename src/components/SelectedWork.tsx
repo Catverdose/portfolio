@@ -56,13 +56,13 @@ export const featuredCopy: Record<
   { tagline: [string, string]; summary: string; points: [string, string][] }
 > = {
   ubot: {
-    tagline: ['모델을 부르기 전에 거르고,', '모델 서버는 바꿔 끼울 수 있게.'],
+    tagline: ['모델이 느려도 질문은 실패하지 않고,', '서버가 멈춰도 작업은 남도록.'],
     summary:
-      '통신 상담 RAG 챗봇에서 채팅 앞단의 금지어 필터와 비회원 횟수 제한, LLM과 임베딩 서버 전환 구조, EC2 배포를 맡았습니다. 회원 인증과 FAQ 관리, 매장 지도는 팀원이 담당했습니다.',
+      '통신 상담 RAG 챗봇에서 답변 생성의 비동기 처리와 장애 복구, AWS 인프라와 배포, 운영 지표와 알림을 맡았습니다. 채팅 앞단의 금지어 필터와 비회원 횟수 제한, 모델 서버 전환 구조도 만들었습니다. 회원 인증과 FAQ 관리, 매장 지도는 팀원이 담당했습니다.',
     points: [
-      ['LLM 호출 전에 차단', '금지어 캐시 · 커밋 뒤 갱신'],
-      ['동시 요청에도 횟수 상한', '대화 행 잠금 뒤 계산'],
-      ['모델 서버 전환', 'AI_MODE · 공통 계약 테스트'],
+      ['질문 실패 321건 → 0건', '202 접수 · Worker 분리 · 로컬 1,000건'],
+      ['장애 4종을 주입해도 유실 0건', 'heartbeat · 펜싱 · 커밋 뒤 ACK'],
+      ['AWS 6,000건 재시험', '시스템 오류 4건 · DB 대조 불일치 0'],
     ],
   },
   petcoupon: {
@@ -145,13 +145,13 @@ const experimentCopy: Record<
   'vector-db-benchmark': {
     question: '검색 품질이 달라도, 속도를 비교할 수 있을까요?',
     finding:
-      'Recall이 비슷한 설정끼리 비교했습니다. 성능은 Qdrant, 팀의 선택은 pgvector였습니다.',
+      'Recall이 비슷한 설정끼리 비교했습니다. 성능은 Qdrant, 팀의 선택은 pgvector였고, 이후 서비스 검색을 HNSW로 옮겼습니다.',
     conditions: '5개 DB · 124개 설정 · 620회 측정 · 합성 1만 청크',
   },
   'llm-serving': {
     question: '어떤 엔진과 GPU면 초당 8건을 넘길까요?',
     finding:
-      'L4에서 vLLM과 SGLang이 기준선을 넘는 것을 관측했습니다. T4와 로컬은 미달이었습니다.',
+      'L4의 vLLM과 SGLang만 기준선을 넘었고, 공식 가중치로 넘은 모델은 Qwen3-4B뿐이었습니다. 임베딩 서빙도 vLLM의 처리량이 높았습니다.',
     conditions: '엔진 4종 · 세 환경 · 반복 검증 전 탐색 결과',
   },
 }

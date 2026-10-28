@@ -1,8 +1,67 @@
 import { collaboration, projects, troubleshooting } from '../data/projects'
 import Icon from './Icon'
 
+type Trouble = (typeof troubleshooting)[number]
+
 const projectTitle = (id: string) =>
   projects.find((project) => project.id === id)?.title ?? id
+
+const featured = troubleshooting.filter((item) => item.featured)
+const others = troubleshooting.filter((item) => !item.featured)
+
+// 접힌 목록은 프로젝트별로 묶습니다. 데이터 순서를 그대로 따릅니다.
+const otherGroups = others.reduce<[string, Trouble[]][]>((groups, item) => {
+  const group = groups.find(([id]) => id === item.projectId)
+  if (group) group[1].push(item)
+  else groups.push([item.projectId, [item]])
+  return groups
+}, [])
+
+function TroubleSteps({ item }: { item: Trouble }) {
+  return (
+    <dl className="trouble-steps">
+      <div>
+        <dt>증상</dt>
+        <dd>{item.symptom}</dd>
+      </div>
+      <div>
+        <dt>원인</dt>
+        <dd>{item.cause}</dd>
+      </div>
+      <div>
+        <dt>해결</dt>
+        <dd>{item.fix}</dd>
+      </div>
+      <div>
+        <dt>확인</dt>
+        <dd>{item.check}</dd>
+      </div>
+    </dl>
+  )
+}
+
+function TroubleLinks({ item }: { item: Trouble }) {
+  return (
+    <div className="trouble-links">
+      {item.evidence?.map((link) => (
+        <a
+          key={link.href}
+          className="text-link"
+          href={link.href}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {link.label}
+          <Icon name="external" size={13} />
+        </a>
+      ))}
+      <a className="text-link" href={`#/projects/${item.projectId}`}>
+        {projectTitle(item.projectId)}에서 자세히
+        <Icon name="arrow" size={14} />
+      </a>
+    </div>
+  )
+}
 
 /** 첫 화면용 요약. 증상부터 확인까지의 과정은 #/troubleshooting 페이지에 있습니다. */
 export function NotesTeaser() {
@@ -21,13 +80,18 @@ export function NotesTeaser() {
           <div className="card">
             <p className="eyebrow">문제 해결</p>
             <ul className="notes-list">
-              {troubleshooting.map((item) => (
+              {featured.map((item) => (
                 <li key={item.title}>
                   <strong>{item.title}</strong>
                   <span>{item.summary}</span>
                 </li>
               ))}
             </ul>
+            {others.length > 0 && (
+              <p className="notes-count">
+                그 밖에 {others.length}건은 상세 페이지에 접어 두었습니다.
+              </p>
+            )}
           </div>
           <div className="card">
             <p className="eyebrow">협업</p>
@@ -63,35 +127,50 @@ export function Troubleshooting() {
           </p>
         </header>
         <div className="trouble-grid">
-          {troubleshooting.map((item) => (
+          {featured.map((item) => (
             <article className="card trouble-card" key={item.title}>
               <p className="eyebrow">{item.label}</p>
               <h3>{item.title}</h3>
-              <dl>
-                <div>
-                  <dt>증상</dt>
-                  <dd>{item.symptom}</dd>
-                </div>
-                <div>
-                  <dt>원인</dt>
-                  <dd>{item.cause}</dd>
-                </div>
-                <div>
-                  <dt>해결</dt>
-                  <dd>{item.fix}</dd>
-                </div>
-                <div>
-                  <dt>확인</dt>
-                  <dd>{item.check}</dd>
-                </div>
-              </dl>
-              <a className="text-link" href={`#/projects/${item.projectId}`}>
-                {projectTitle(item.projectId)}에서 자세히
-                <Icon name="arrow" size={14} />
-              </a>
+              <TroubleSteps item={item} />
+              <TroubleLinks item={item} />
             </article>
           ))}
         </div>
+
+        {others.length > 0 && (
+          <section className="trouble-more" aria-labelledby="trouble-more-title">
+            <header>
+              <h3 id="trouble-more-title">그 밖에 고친 문제 {others.length}건</h3>
+              <p>제목을 누르면 증상부터 확인까지 펼쳐집니다.</p>
+            </header>
+            {otherGroups.map(([projectId, items]) => (
+              <div className="trouble-group" key={projectId}>
+                <p className="eyebrow">
+                  {projectTitle(projectId)} · {items.length}건
+                </p>
+                <div className="trouble-list">
+                  {items.map((item) => (
+                    <details className="trouble-item" key={item.title}>
+                      <summary>
+                        <span>
+                          <span className="trouble-item-label">{item.label}</span>
+                          <strong>{item.title}</strong>
+                          <span className="trouble-item-summary">
+                            {item.summary}
+                          </span>
+                        </span>
+                      </summary>
+                      <div className="trouble-item-body">
+                        <TroubleSteps item={item} />
+                        <TroubleLinks item={item} />
+                      </div>
+                    </details>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </section>
+        )}
       </div>
     </section>
   )

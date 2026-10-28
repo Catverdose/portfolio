@@ -31,7 +31,7 @@ const figures: Record<string, ComponentType> = {
 }
 // 설계 그림이 설명하는 기능(features 배열의 순서). 그 기능을 펼치면 함께 보입니다.
 const designFeature: Record<string, number> = {
-  ubot: 4,
+  ubot: 8,
   'engineering-memory': 0,
 }
 
