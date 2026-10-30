@@ -23,15 +23,16 @@ export default function HomePage({
     <main id="main" className="page">
       <section className="hero" aria-labelledby="hero-title">
         <div className="container hero-inner">
-          <p className="eyebrow">BACKEND DEVELOPER · JAVA · SPRING BOOT</p>
+          <p className="eyebrow">BACKEND DEVELOPER · JAVA · SPRING BOOT · AWS</p>
           <h1 id="hero-title">
-            동작을 넘어,
+            실패해도,
             <br />
-            <span>신뢰할 수 있도록.</span>
+            <span>상태가 어긋나지 않도록.</span>
           </h1>
           <p className="hero-lead">
-            데이터와 시스템 상태가 어긋나기 쉬운 경계를 다루고, 테스트와
-            측정으로 확인합니다.
+            동시 요청, 비동기 처리, 배포와 장애 복구처럼 데이터와 시스템 상태가
+            어긋나기 쉬운 경계를 다룹니다. 서비스 코드에서 AWS 인프라까지 직접
+            설계하고, 테스트와 측정으로 확인합니다.
           </p>
           <div className="hero-actions">
             <a className="button button-primary" href="#projects">
@@ -52,7 +53,7 @@ export default function HomePage({
         <div className="container">
           <ul className="proof-grid" aria-label="측정으로 남긴 기록">
             {heroProofs.map((proof) => (
-              <li key={proof.projectId}>
+              <li key={`${proof.projectId}-${proof.value}`}>
                 <a className="card proof-card" href={`#/projects/${proof.projectId}`}>
                   <strong>
                     {proof.value}

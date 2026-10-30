@@ -29,11 +29,6 @@ const archive = [
     'Prompt experiment',
     '모델 응답의 동조 성향을 줄이기 위한 프롬프트를 탐색합니다.',
   ],
-  [
-    'Causal-Loom',
-    'Prompt experiment',
-    '서사 구성을 위한 모듈형 프롬프트 실험입니다.',
-  ],
 ]
 
 function ProjectPanel({

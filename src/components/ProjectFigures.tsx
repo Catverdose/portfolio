@@ -83,6 +83,84 @@ export function ChatPipeline() {
   )
 }
 
+function AwsEdge({ port, from }: { port: string; from: string }) {
+  return (
+    <div className="aws-edge">
+      <strong>{port}</strong>
+      <span>{from}</span>
+    </div>
+  )
+}
+
+function AwsNode({
+  name,
+  detail,
+  icon,
+}: {
+  name: string
+  detail: string
+  icon: 'code' | 'terminal' | 'database' | 'layers' | 'activity'
+}) {
+  return (
+    <div className="aws-node">
+      <Icon name={icon} size={18} />
+      <strong>{name}</strong>
+      <span>{detail}</span>
+    </div>
+  )
+}
+
+/** UBot: 서버를 어떻게 나눴고 누가 어디에 접근할 수 있는지. security_groups.tf 기준입니다. */
+export function AwsTopology() {
+  return (
+    <div
+      className="aws-topology"
+      aria-label="사용자 요청이 FE, BE를 거쳐 State 서버와 내부 NLB 뒤의 Spot GPU로 가는 AWS 구성과 보안 그룹 경계"
+    >
+      <div className="architecture-header mono">
+        <span>WHO CAN REACH WHOM</span>
+        <Icon name="shield" size={16} />
+      </div>
+      <div className="aws-diagram">
+        <div className="aws-public">
+          <AwsNode icon="code" name="사용자" detail="인터넷" />
+          <AwsEdge port="80 · 443" from="공개" />
+        </div>
+        <div className="aws-vpc">
+          <span className="aws-vpc-label mono">VPC</span>
+          <AwsNode icon="code" name="FE EC2" detail="Nginx HTTPS · 화면 · /api 전달" />
+          <AwsEdge port="80" from="FE에서만" />
+          <AwsNode icon="terminal" name="BE EC2" detail="Nginx · API · Worker" />
+          <div className="aws-lanes">
+            <div className="aws-lane">
+              <AwsEdge port="5432 · 6379" from="API · Worker만" />
+              <AwsNode icon="database" name="State EC2" detail="PostgreSQL · Redis" />
+            </div>
+            <div className="aws-lane">
+              <AwsEdge port="8000 · 8001" from="API·Worker만" />
+              <AwsNode icon="activity" name="내부 NLB" detail="채팅 8000은 Worker만 · 임베딩 8001은 API·Worker" />
+              <AwsEdge port="8000 · 8001" from="NLB에서만" />
+              <AwsNode icon="layers" name="Spot GPU ASG" detail="vLLM · 사용률 60% · 최대 3대" />
+            </div>
+          </div>
+        </div>
+      </div>
+      <ol className="aws-deploy mono" aria-label="배포 경로">
+        <li>GitHub Actions</li>
+        <li>OIDC 역할</li>
+        <li>ECR</li>
+        <li>SSM</li>
+        <li>BE EC2</li>
+      </ol>
+      <span className="diagram-note">
+        FE는 SSM으로 서버에서 빌드해 current 링크를 전환 · 자원은 Terraform 원격
+        state로 관리 · 관리용 SSH는 특정 IP로 제한 · 자동 확장은 실제 트래픽으로
+        검증 전
+      </span>
+    </div>
+  )
+}
+
 /** PetCoupon: 로그가 게이트와 구독자별 큐를 거쳐 관리자 화면으로 가는 구조입니다. */
 export function MonitoringFlow() {
   return (

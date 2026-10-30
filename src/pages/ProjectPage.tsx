@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { Fragment, useEffect, useRef } from 'react'
 import type { ComponentType, ReactNode } from 'react'
 import type { Feature, Project } from '../data/projects'
 import {
@@ -15,6 +15,7 @@ import ProjectDesign, { hasProjectDesign } from '../components/ProjectDesign'
 import Contribution from '../components/Contribution'
 import Architecture from '../components/Architecture'
 import {
+  AwsTopology,
   ChatPipeline,
   MonitoringFlow,
   TeamMeasurement,
@@ -31,11 +32,16 @@ const figures: Record<string, ComponentType> = {
 }
 // 설계 그림이 설명하는 기능(features 배열의 순서). 그 기능을 펼치면 함께 보입니다.
 const designFeature: Record<string, number> = {
-  ubot: 8,
+  ubot: 13,
   'engineering-memory': 0,
 }
 
 const pad = (value: number) => String(value).padStart(2, '0')
+
+// 묶음 이름은 그 묶음의 첫 기능 앞에만 보여 줍니다.
+const startsGroup = (features: Feature[], index: number) =>
+  Boolean(features[index].group) &&
+  features[index].group !== features[index - 1]?.group
 
 function ResultTable({
   title,
@@ -111,6 +117,9 @@ function FeatureIndex({ project }: { project: Project }) {
       <ol>
         {project.features.map((feature, index) => (
           <li key={feature.title}>
+            {startsGroup(project.features, index) && (
+              <span className="feature-index-group">{feature.group}</span>
+            )}
             <button
               type="button"
               onClick={() =>
@@ -305,6 +314,12 @@ export default function ProjectPage({ project }: { project: Project }) {
           </div>
         )}
 
+        {project.id === 'ubot' && (
+          <div className="project-figure is-wide">
+            <AwsTopology />
+          </div>
+        )}
+
         {!labAfterStory && lab}
       </div>
 
@@ -343,16 +358,20 @@ export default function ProjectPage({ project }: { project: Project }) {
 
           <div className="features">
             {project.features.map((feature, index) => (
-              <FeatureCard
-                key={feature.title}
-                feature={feature}
-                index={index}
-                design={
-                  index === designIndex ? (
-                    <ProjectDesign project={project} />
-                  ) : undefined
-                }
-              />
+              <Fragment key={feature.title}>
+                {startsGroup(project.features, index) && (
+                  <p className="eyebrow feature-group">{feature.group}</p>
+                )}
+                <FeatureCard
+                  feature={feature}
+                  index={index}
+                  design={
+                    index === designIndex ? (
+                      <ProjectDesign project={project} />
+                    ) : undefined
+                  }
+                />
+              </Fragment>
             ))}
           </div>
 

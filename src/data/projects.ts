@@ -9,6 +9,8 @@ export interface EvidenceLink {
 /** 기능 단위 기록. 기획 → 개발 → 마무리 순서로 읽습니다. */
 export interface Feature {
   title: string
+  /** 상세 페이지에서 기능을 묶는 이름 */
+  group?: string
   /** 상세 페이지에서 먼저 보이는 요약. 전체 과정은 펼쳐야 보입니다. */
   brief?: { plan: string; build: string[]; outcome: string }
   /** 기획: 풀어야 했던 문제와 어떻게 풀려고 했는지 */
@@ -73,8 +75,8 @@ export const projects: Project[] = [
     period: '2026.09 ~ 2026.10',
     question: '모델이 멈추면 접수된 질문은 어디로 갈까?',
     description:
-      '통신 상담 RAG 챗봇에서 답변의 비동기 처리와 장애 복구, AWS 배포와 운영을 맡다',
-    role: '비동기 채팅·장애 복구 · AWS 인프라·CI/CD · 운영 지표·알림 · 입력 필터·비회원 채팅 · 모델 서버 전환',
+      '통신 상담 RAG 챗봇에서 AWS 인프라와 배포, 답변의 비동기 처리와 장애 복구를 맡다',
+    role: 'AWS 인프라 설계·CI/CD · 비동기 채팅·장애 복구 · 운영 지표·알림 · 상담사 연결·입력 보호 · 모델 서버 전환·FAQ 검색',
     contribution: [
       '백엔드 Merged PR 34개',
       '프론트 Merged PR 15개',
@@ -91,15 +93,197 @@ export const projects: Project[] = [
       'Prometheus',
     ],
     highlights: [
-      '질문은 202로 접수하고 Worker가 생성, 장애 4종을 주입해도 작업 유실 0건',
+      'FE·BE·State·GPU로 나눈 AWS 구성과 보안 그룹 경계, Spot GPU ASG를 Terraform으로 관리',
+      '질문은 202로 접수하고 Worker가 생성, 로컬에서 장애 4종을 주입해도 작업 유실 0건',
       'AWS 실서비스 경로로 6,000건 재시험, 시스템 오류 4건',
-      'Terraform·OIDC·SSM 배포와 배포 실패 뒤 Worker 자동 복구',
     ],
     github: ubotBe,
     overview:
-      'FAQ 검색과 LLM 답변, 상담사 연결, 매장 지도를 제공하는 통신사 상담 챗봇이고, AWS에 배포해 2026년 10월까지 운영한 팀 프로젝트입니다. 저는 답변 생성의 비동기 처리와 장애 복구, AWS 인프라와 배포, 운영 지표와 알림, 채팅 앞단(금지어, 비회원), 모델 서버 전환 구조를 맡았습니다. 이 밖에 상담사 연결(#244)과 본인 회선 통신정보 조회 API(#165)도 구현했습니다. 회원 인증(JWT), FAQ 관리, 매장 지도 검색은 팀원이 담당했습니다.',
+      'FAQ 검색과 LLM 답변, 상담사 연결, 매장 지도를 제공하는 통신사 상담 챗봇이고, AWS에 배포해 2026년 10월까지 운영한 팀 프로젝트입니다. 저는 AWS 인프라 설계와 배포, 답변 생성의 비동기 처리와 장애 복구, 운영 지표와 알림, 상담사 연결, 채팅 앞단(금지어, 비회원), 모델 서버 전환과 FAQ 검색을 맡았습니다. 이 밖에 본인 회선 통신정보 조회 API(#165), 상품 4종 관리(#157), 프론트 구조 분리(FE #64)도 구현했습니다. 회원 인증(JWT), FAQ 관리, 매장 지도 검색은 팀원이 담당했습니다.',
     features: [
       {
+        group: 'AWS 인프라',
+        title: '서버를 나누고, 필요한 곳에만 열기',
+        brief: {
+          plan: 'FE, BE, DB·Redis, GPU가 서로 다른 서버로 나뉘면서 각 서버가 어디서 오는 요청만 받을지 정해야 했습니다.',
+          build: [
+            '외부 요청은 FE Nginx(HTTPS)로만 받고, /api는 VPC 사설 주소로 BE에 전달',
+            '보안 그룹으로 BE HTTP는 FE만, PostgreSQL·Redis는 API·Worker만, GPU 추론 포트는 내부 NLB만 허용',
+            'BE Nginx는 FE 사설 IP가 전달한 클라이언트 IP만 신뢰하고, 그 IP와 회원 토큰 기준으로 채팅 접수 제한',
+          ],
+          outcome: '#306, #261, FE #72 병합. 보안 그룹 규칙까지 Terraform 코드로 확인할 수 있습니다.',
+        },
+        plan: '처음에는 EC2 한 대에 백엔드와 DB, 모델 서버를 함께 올렸습니다. FE, BE, DB·Redis, GPU가 서로 다른 서버로 나뉘면서 어떤 서버가 어디서 오는 요청을 받을지 정해야 했습니다. 외부에 여는 곳은 FE 하나로 두고, 나머지는 바로 앞 단계에서 오는 요청만 받게 하기로 했습니다.',
+        build:
+          '외부 요청은 FE Nginx가 HTTPS로 받고, /api는 VPC 사설 주소로 BE Nginx에 전달합니다. BE의 80번은 FE 보안 그룹에서만 받습니다. Worker는 BE 서버에서 함께 돌지만 보안 그룹을 따로 붙였습니다. State 서버의 PostgreSQL과 Redis는 API와 Worker 보안 그룹에서만 받습니다. GPU 앞에는 내부 NLB를 두고, 채팅(8000)은 Worker만, 임베딩(8001)은 API와 Worker만 부를 수 있게 했습니다. GPU의 8000, 8001번은 NLB 보안 그룹에서만 받습니다. FE를 거치면 클라이언트 IP가 FE 주소로 보이므로, BE Nginx는 FE 사설 IP가 전달한 X-Forwarded-For만 믿습니다. 이 IP와 회원 토큰으로 Nginx에서, 회원 ID로 백엔드에서 채팅 접수를 제한합니다(기본 60초 30회).',
+        outcome:
+          '#306, #261과 프론트 #72가 병합됐습니다. 기존 보안 그룹 6개를 규칙째 Terraform으로 가져와, 누가 어디에 접근할 수 있는지를 코드로 확인할 수 있습니다. BE와 FE 모두 실제 AWS 배포를 확인했습니다.',
+        limit:
+          'FE, BE, GPU 보안 그룹에는 관리용 SSH가 특정 IP로 열려 있습니다. NAT가 없어 GPU는 퍼블릭 서브넷에서 공인 IP로 뜨고(추론 포트는 NLB에서만 받음), g6.xlarge를 쓸 수 있으면서 인터넷이 되는 서브넷이 하나뿐이라 한 가용 영역에 있습니다.',
+        evidence: [
+          {
+            label: 'AWS Terraform 스택 (#306)',
+            href: `${ubotBe}/pull/306`,
+            detail: 'VPC · 서버 · 보안 그룹 · 내부 NLB',
+          },
+          {
+            label: 'AWS 구성 문서',
+            href: `${ubotBe}/blob/develop/infra/terraform/aws-poc.md`,
+          },
+          {
+            label: 'Nginx 접수 제한 (#261)',
+            href: `${ubotBe}/pull/261`,
+            detail: '게스트 IP · 회원 토큰 · 회원 ID',
+          },
+          {
+            label: 'FE Nginx와 /api 전달 (FE #72)',
+            href: `${ubotFe}/pull/72`,
+          },
+        ],
+      },
+      {
+        group: 'AWS 인프라',
+        title: 'GPU 서버 수를 사용률에 맞춰 조절하기',
+        brief: {
+          plan: '모델 서버는 부팅과 모델 적재에 약 5분이 걸려, 일반 서버처럼 바로 늘리고 줄이면 준비 중인 서버가 잘못 판단될 수 있었습니다.',
+          build: [
+            'Docker, NVIDIA, vLLM, 모델 캐시를 미리 담은 AMI로 부팅',
+            '평균 GPU 사용률 60%를 목표로 최대 3대까지 조절하고 NLB 대상에 자동 등록',
+            '준비 시간 420초로 적재 중 축소를 막고, 연결 종료 유예 120초와 용량 재조정으로 교체에 대비',
+          ],
+          outcome: 'AWS 6,000건 시험을 기존 GPU 1대와 Spot GPU 2대로 NLB 뒤에서 처리했습니다. 자동 확장 자체는 실제 트래픽으로 검증하지 않았습니다.',
+        },
+        plan: 'LLM 실험에서 초당 8건 기준선을 넘은 것은 L4 GPU였고, 이 GPU를 g6.xlarge Spot으로 쓰기로 했습니다. 모델 서버는 부팅과 모델 적재에 약 5분이 걸립니다. 이 사이 GPU 사용률이 낮게 나오면 축소 대상이 될 수 있고, 준비되지 않은 서버로 요청이 가면 안 됩니다.',
+        build:
+          'Docker, NVIDIA 런타임, vLLM, 모델 캐시와 자동 시작을 미리 담은 AMI를 만들고, 인스턴스는 이 AMI로 부팅합니다. CloudWatch 에이전트가 보내는 GPU 사용률의 평균 60%를 목표로 ASG가 대수를 조절합니다(최대 3대). 준비 시간 420초로 적재 중 축소를 막고, NLB의 /health 검사를 10초 간격으로 3회 통과해야 요청을 받습니다. 연결 종료 유예 120초는 백엔드의 LLM 읽기 제한과 같게 두어 처리 중인 답변이 끝날 수 있게 했고, 용량 재조정을 켜 Spot 중단에 대비했습니다. 스냅샷에서 복원한 볼륨은 모델을 늦게 읽어 볼륨 초기화 속도를 지정했습니다. 관리자 분석용 On-Demand GPU는 분석 중에 NLB 대상에서 빠졌다가 끝나면 다시 등록되는 구성을 선택적으로 넣었습니다.',
+        outcome:
+          '#306이 병합됐습니다. AWS 6,000건 시험은 기존 GPU 1대와 Spot GPU 2대를 NLB 뒤에 두고 진행했습니다. 시험 중 드러난 모델 컨텍스트 한도는 기존 AMI로 뜨는 Spot GPU에도 같은 값이 적용되게 고쳤습니다(#318).',
+        limit:
+          '자동 확장과 Spot 교체는 실제 트래픽으로 검증하지 않았습니다. 2026-10-26 plan 당시 ASG 크기는 0이었고 On-Demand 전환은 꺼져 있었습니다. 서버 수별 처리량이나 비용 비교 결과는 없습니다.',
+        evidence: [
+          {
+            label: 'AWS Terraform 스택 (#306)',
+            href: `${ubotBe}/pull/306`,
+            detail: 'GPU AMI · Spot ASG · 내부 NLB',
+          },
+          {
+            label: 'GPU 확장·준비·제거 설정',
+            href: `${ubotBe}/blob/develop/infra/terraform/aws-poc.md`,
+            detail: '목표 60% · 준비 420초 · 유예 120초',
+          },
+          {
+            label: '시험에 쓴 GPU 구성 (ServerTest)',
+            href: `${ubotServerTest}/blob/main/chat-e2e/results/20261026-aws/README.md`,
+          },
+        ],
+      },
+      {
+        group: 'AWS 인프라',
+        title: '콘솔에서 만든 AWS 자원을 코드로 옮기기',
+        brief: {
+          plan: '서버, GPU, 배포 권한이 콘솔에서 만든 자원에 걸쳐 있어 구성과 변경 범위를 코드로 확인하기 어려웠습니다.',
+          build: [
+            '실험용 GPU 서버는 bootstrap, network, gpu-test로 나눠 GPU만 지워도 네트워크가 남게 구성',
+            '기존 VPC, 서버, ECR, IAM, 보안 그룹을 원격 state로 가져오고 FE·BE·State에 prevent_destroy',
+            'GitHub OIDC 배포 역할의 권한을 지정한 ECR과 인스턴스로 제한',
+          ],
+          outcome: '#133 #306 병합. 원격 plan으로 생성 0·변경 1·삭제 0을 확인했습니다(이 plan은 적용하지 않음).',
+        },
+        plan: 'LLM 실험에 GPU가 필요했는데 AWS 계정의 vCPU 상한 때문에 제가 서버를 더 만들 수 없어, 팀원이 같은 환경을 재현할 수 있게 코드로 만들었습니다(#133). 이후 서비스 자원도 FE, BE, State 서버와 GPU, 배포 권한이 콘솔에서 만든 자원에 걸쳐 있어 구성과 변경 범위를 코드로 보기로 했습니다.',
+        build:
+          '#133은 bootstrap(원격 state용 S3), network, gpu-test로 나눠 GPU만 지워도 네트워크가 남게 했습니다. SSH 포트 없이 Session Manager로만 접속하고, Terraform과 AWS CLI는 Docker로 실행합니다. #306은 기존 VPC, 서버, ECR, IAM, 보안 그룹을 원격 state로 가져오고 NLB, GPU AMI 빌더, Spot ASG, 선택적 On-Demand GPU까지 코드로 정리했습니다. FE, BE, State와 VPC에는 prevent_destroy를 걸었고, CD 역할은 지정한 ECR과 인스턴스에만 쓸 수 있습니다. 환경별 값(terraform.tfvars, backend.hcl)은 저장소에 넣지 않았습니다.',
+        outcome:
+          '#133, #306이 병합됐습니다. #133은 apply 성공, Session Manager 접속과 nvidia-smi로 L4 확인, gpu-test를 지운 뒤 network 유지를 확인했습니다. #306은 fmt, validate를 통과했고 2026-10-26 원격 plan은 생성 0, 변경 1, 삭제 0이었습니다.',
+        limit:
+          '이 스택으로 AWS 전체를 처음부터 만든 것이 아니라 기존 자원을 가져온 것입니다. plan의 변경 1건은 시작 템플릿 user_data의 주석 차이였고, 이 plan은 적용하지 않았습니다.',
+        evidence: [
+          {
+            label: 'AWS Terraform 스택 (#306)',
+            href: `${ubotBe}/pull/306`,
+            detail: '기존 자원 가져오기 · prevent_destroy · plan 결과',
+          },
+          {
+            label: 'GPU 테스트 인프라 (#133)',
+            href: `${ubotBe}/pull/133`,
+            detail: 'bootstrap · network · gpu-test 분리',
+          },
+        ],
+      },
+      {
+        group: 'AWS 인프라',
+        title: '배포가 실패해도 서비스가 돌아오도록',
+        brief: {
+          plan: 'EC2 수동 배포로 시작했지만 FE와 BE 서버가 나뉘면서 배포도 서버별로 자동화해야 했고, 배포가 중간에 실패하면 Worker가 꺼진 채 남을 수 있었습니다.',
+          build: [
+            'develop CI가 통과하면 OIDC로 ECR에 올리고 SSM으로 BE에 배포',
+            'FE는 current 링크를 바꾼 뒤 새 버전이 안 뜨면 이전 릴리스로 자동 복구',
+            '배포가 Worker를 멈춘 채 실패하면 독립 systemd 타이머가 같은 이미지로 복구',
+          ],
+          outcome: '실제 AWS 배포 성공(Flyway V41, Prometheus 대상 5개 up). 배포 강제 종료 뒤 Worker 복구는 로컬 Linux에서 확인.',
+        },
+        plan: '처음에는 백엔드 이미지와 배포 Compose를 만들고(#56, #58) GitHub Actions 수동 CD로 EC2 한 대에 배포했습니다. 502가 30번 넘게 반복되던 문제는 배포 전 점검 단계를 넣어 하나씩 해결했습니다(#77, #88). Redis와 Prometheus 기반을 붙이고(#120), LLM 실험용 GPU 서버는 Terraform으로 필요할 때만 만들고 지우게 했습니다(#133). 이후 FE, BE, GPU 서버가 나뉘면서 배포를 서버별로 자동화하고, 배포가 실패했을 때 돌아올 길을 만들어야 했습니다.',
+        build:
+          'BE는 develop CI가 성공하면 OIDC 역할로 ECR에 이미지를 올리고 SSM으로 EC2에 배포합니다(#261). FE는 서버에서 같은 커밋을 빌드해 current 링크를 바꾸고, 새 버전이 뜨지 않으면 이전 릴리스로 되돌립니다(FE #72). 그런데 CD가 Worker를 멈춘 뒤 실패하면, API는 질문을 받는데 답변할 Worker가 없는 상태가 됩니다. SSM, Worker와 독립된 systemd 타이머가 30초마다 확인해 API가 정상이면 같은 이미지 digest로 Worker를 복구하게 했습니다. 배포 잠금으로 배포와 동시에 돌지 않게 하고, API 비정상이나 점검 중에는 복구를 보류합니다(#318).',
+        outcome:
+          '#261, #318과 프론트 #72가 병합됐습니다. BE는 실제 AWS 배포에서 Flyway V41 적용과 Prometheus 대상 5개 up을, FE는 실제 서비스 반영(검증 38초, 배포 49초)을 확인했습니다. 배포 스크립트를 Worker 정지 직후 강제 종료(SIGKILL)했을 때 외부 복구가 되는 것은 로컬 Linux에서 확인했고, AWS에는 타이머를 설치한 뒤 기존 Worker를 유지한 채 새 질문이 정상 처리되는 것을 확인했습니다.',
+        limit:
+          '강제 종료 시험은 AWS가 아니라 로컬 Linux에서 했습니다. #318 커밋 전체를 CD로 다시 배포하는 것은 PR 시점에 실행하지 않았습니다.',
+        evidence: [
+          {
+            label: 'AWS Worker 자동 복구 (#318)',
+            href: `${ubotBe}/pull/318`,
+            detail: '독립 systemd 타이머 · 배포 잠금 · 같은 이미지 digest',
+          },
+          {
+            label: 'AWS BE CI/CD와 Prometheus (#261)',
+            href: `${ubotBe}/pull/261`,
+            detail: 'OIDC → ECR → SSM',
+          },
+          {
+            label: 'AWS FE CD와 자동 되돌리기 (FE #72)',
+            href: `${ubotFe}/pull/72`,
+          },
+          {
+            label: '초기 수동 CD의 Compose 충돌 수정 (#88)',
+            href: `${ubotBe}/pull/88`,
+            detail: '프로젝트 이름 통일 · 배포 전 점검 · Nginx 재생성 순서',
+          },
+        ],
+      },
+      {
+        group: 'AWS 인프라',
+        title: '장애를 사용자보다 먼저 알기',
+        brief: {
+          plan: 'Worker로 나누고 나니 대기열이 밀리는지, LLM이 느려졌는지 로그만으로는 알기 어려웠습니다.',
+          build: [
+            'Chat Job, LLM, 검색, 임베딩, DB, Redis 지표를 역할 태그와 함께 수집',
+            '알림 규칙 6개를 Discord, Slack으로 보내고 알림마다 런북 연결',
+            '알림 설정 생성 스크립트는 값이 틀리면 아무것도 바꾸지 않고 실패',
+          ],
+          outcome: '#268 #274 병합. 로컬에서 실제 Discord·Slack으로 장애(FIRING)와 복구(RESOLVED) 알림 수신.',
+        },
+        plan: '접수와 생성을 나누자 대기열이 밀리는지, LLM이 느려졌는지, Worker가 작업을 회수하고 있는지를 로그만으로는 알기 어려웠습니다. 지표를 먼저 정하고, 장애는 사용자보다 먼저 알 수 있게 하기로 했습니다.',
+        build:
+          'Chat Job의 실행 시간과 대기 시간, 회수 사유, LLM 호출 시간과 동시 호출 수, 임베딩과 벡터 검색 시간, DB 커넥션 사용 시간, Redis 스트림 적체를 지표로 남기고 모든 지표에 role 태그를 붙였습니다(#268). Backend, Worker, PostgreSQL, Redis 장애와 Chat Job 대기 지연, LLM 시간 초과 비율에 알림 규칙 6개를 두고 Alertmanager로 Discord와 Slack에 보냅니다. 알림마다 런북을 연결했고, 알림 설정 생성 스크립트는 기준값이나 Webhook이 틀리면 아무것도 바꾸지 않고 실패합니다(#274).',
+        outcome:
+          '#268, #274가 병합됐습니다. 적체 집계 SQL은 Testcontainers PostgreSQL로, exporter의 지표 이름은 실제 컨테이너로 확인했습니다. 로컬에서 실제 Discord와 Slack으로 장애(FIRING)와 복구(RESOLVED) 알림을 받았습니다.',
+        limit:
+          '알림 수신은 로컬에서 확인했고, PR 시점에 AWS 배포 연결은 후속 작업으로 남겨 두었습니다.',
+        evidence: [
+          {
+            label: '운영 모니터링 지표 (#268)',
+            href: `${ubotBe}/pull/268`,
+            detail: 'Chat Job · LLM · 검색 · 임베딩 · DB · Redis',
+          },
+          {
+            label: 'Prometheus 장애 알림 Discord·Slack 전송 (#274)',
+            href: `${ubotBe}/pull/274`,
+            detail: '알림 규칙 6개 · 런북 · 설정 검증',
+          },
+        ],
+      },
+      {
+        group: '채팅 백엔드',
         title: '모델이 느려도 질문이 실패하지 않도록',
         brief: {
           plan: '요청 스레드가 LLM 답변을 끝까지 기다리는 구조라, 질문이 몰리면 시간 초과로 실패했습니다.',
@@ -134,6 +318,7 @@ export const projects: Project[] = [
         ],
       },
       {
+        group: '채팅 백엔드',
         title: '서버가 멈춰도 작업이 사라지지 않도록',
         brief: {
           plan: 'Worker가 답변 도중 죽거나 Redis 메시지가 사라지면, 접수된 질문이 영영 끝나지 않을 수 있었습니다.',
@@ -165,6 +350,7 @@ export const projects: Project[] = [
         ],
       },
       {
+        group: '채팅 백엔드',
         title: '실서비스 경로로 6,000건을 보내 보기',
         brief: {
           plan: '로컬 결과만으로는 AWS의 실제 경로(FE Nginx → BE → Worker → GPU)에서 버티는지 알 수 없었습니다.',
@@ -196,82 +382,42 @@ export const projects: Project[] = [
         ],
       },
       {
-        title: 'AWS 배포, 그리고 배포가 실패했을 때',
+        group: '채팅 백엔드',
+        title: 'AI 대화를 상담사에게 넘기되, 다른 대화는 보이지 않게',
         brief: {
-          plan: 'EC2 수동 배포로 시작했지만, 서버가 나뉘고 GPU를 Spot으로 쓰면서 손으로 관리할 수 없게 됐습니다.',
+          plan: '회원이 AI 대화를 상담사에게 넘길 때 다른 대화나 허용되지 않은 메시지가 노출되면 안 됐고, 재배정과 재접속에도 이력이 맞아야 했습니다.',
           build: [
-            'Terraform으로 VPC, FE·BE EC2, ECR, OIDC, GPU AMI와 Spot ASG를 코드로',
-            'develop CI가 통과하면 OIDC로 ECR에 올리고 SSM으로 BE에 배포',
-            '배포가 Worker를 멈춘 채 실패하면 독립 systemd 타이머가 같은 이미지로 복구',
+            '서버에 저장된 해당 대화의 AI 문답과 FAQ 선택만 인계 이력으로 생성',
+            '역할은 현재 DB 기준으로 확인하고, 재배정 뒤 이전 상담사의 접근 차단',
+            '메시지는 PENDING으로 저장한 뒤 검사를 통과한 것만 전달하고, 재전송은 clientMessageId로 멱등 처리',
           ],
-          outcome: '실제 AWS 배포 성공(Flyway V41, Prometheus 대상 5개 up). 배포 강제 종료 뒤 Worker 복구는 로컬 Linux에서 확인.',
+          outcome: '백엔드 #244, 프론트 #68 #76 병합. 실제 두 계정으로 연결, 양방향 전송, 차단, 이력 복원을 확인했습니다(PR 기록).',
         },
-        plan: '처음에는 백엔드 이미지와 배포 Compose를 만들고(#56, #58) GitHub Actions 수동 CD로 EC2 한 대에 배포했습니다. 502가 30번 넘게 반복되던 문제는 배포 전 점검 단계를 넣어 하나씩 해결했습니다(#77, #88). Redis와 Prometheus 기반을 붙이고(#120), LLM 실험용 GPU 서버는 Terraform으로 필요할 때만 만들고 지우게 했습니다(#133). 이후 FE, BE, GPU 서버가 나뉘고 GPU를 Spot으로 쓰면서 자원과 배포를 손으로 관리하기 어려워졌습니다.',
+        plan: '회원이 AI 대화를 상담사에게 넘길 때 다른 대화의 내용이나 허용되지 않은 메시지가 노출되면 안 됐습니다. 상담사가 바뀌거나 다시 접속해도, 메시지를 두 번 보내도 이력은 맞아야 했습니다. 클라이언트가 보낸 대화 본문은 믿지 않기로 했습니다.',
         build:
-          'Terraform으로 VPC와 서브넷, FE·BE EC2, ECR과 GitHub Actions OIDC, IAM 역할, AI용 NLB, GPU AMI 빌더와 Spot GPU Auto Scaling Group을 코드로 관리합니다(#306). BE는 develop CI가 성공하면 OIDC 역할로 ECR에 이미지를 올리고 SSM으로 EC2에 배포합니다(#261). FE는 서버에서 같은 커밋을 빌드해 current 링크를 바꾸고, 새 버전이 뜨지 않으면 이전 릴리스로 되돌립니다(FE #72). 그런데 CD가 Worker를 멈춘 뒤 실패하면, API는 질문을 받는데 답변할 Worker가 없는 상태가 됩니다. SSM, Worker와 독립된 systemd 타이머가 30초마다 확인해 API가 정상이면 같은 이미지 digest로 Worker를 복구하게 했습니다. 배포 잠금으로 배포와 동시에 돌지 않게 하고, API 비정상이나 점검 중에는 복구를 보류합니다(#318).',
+          '서버에 저장된 해당 대화의 AI 문답과 FAQ 선택만 인계 이력으로 만들고, 상담 생성과 이력, 배정을 한 트랜잭션으로 처리합니다. 역할은 현재 DB 기준으로 확인하고 재배정 뒤 이전 상담사의 접근을 막습니다. 메시지는 PENDING으로 저장한 뒤 금지어와 임베딩 유사도를 검사해 ALLOWED만 전달하고, 모델 검사 중에는 DB 잠금을 쥐지 않으며 검사 실패를 허용으로 바꾸지 않습니다. clientMessageId로 재전송을 멱등 처리하고, AI와 상담을 합친 이력과 보관 정책을 넣었습니다. 프론트는 고객, 상담사, 관리자 화면과 상태 조회, 재배정 안내를 구현했습니다.',
         outcome:
-          '#261, #306, #318과 프론트 #72가 병합됐습니다. BE는 실제 AWS 배포에서 Flyway V41 적용과 Prometheus 대상 5개 up을, FE는 실제 서비스 반영(검증 38초, 배포 49초)을 확인했습니다. 배포 스크립트를 Worker 정지 직후 강제 종료(SIGKILL)했을 때 외부 복구가 되는 것은 로컬 Linux에서 확인했고, AWS에는 타이머를 설치한 뒤 기존 Worker를 유지한 채 새 질문이 정상 처리되는 것을 확인했습니다.',
+          '백엔드 #244와 프론트 #68, #76이 병합됐습니다. 자동 검증 869건 중 864건 통과, 실패 0건(환경 조건으로 제외 5건)이었고 실제 두 계정 브라우저로 연결, 이전 내역, 양방향 전송, 차단, 이력 복원을 확인했습니다. #76에서 AWS CD 성공과 데모 고객·상담사의 양방향 메시지를 확인했습니다(PR 기록).',
         limit:
-          '강제 종료 시험은 AWS가 아니라 로컬 Linux에서 했습니다. #318 커밋 전체를 CD로 다시 배포하는 것은 PR 시점에 실행하지 않았습니다. 환경별 Terraform 값과 state는 저장소에 넣지 않았습니다.',
+          '상담 의미 판정의 실제 오탐률은 평가 전입니다. 배포할 때 상담 임베딩 Worker와 초기 금지 문장 색인이 필요하고, 프론트는 2초 폴링입니다.',
         evidence: [
           {
-            label: 'AWS Worker 자동 복구 (#318)',
-            href: `${ubotBe}/pull/318`,
-            detail: '독립 systemd 타이머 · 배포 잠금 · 같은 이미지 digest',
+            label: '상담사 연결과 상담 보호·이력 관리 (#244)',
+            href: `${ubotBe}/pull/244`,
+            detail: '인계 이력 · 재배정 · 메시지 판정 · 보관 정책',
           },
           {
-            label: 'AWS BE CI/CD와 Prometheus (#261)',
-            href: `${ubotBe}/pull/261`,
-            detail: 'OIDC → ECR → SSM',
+            label: '상담사 연결과 상담 관리 화면 (FE #68)',
+            href: `${ubotFe}/pull/68`,
           },
           {
-            label: 'AWS Terraform 스택 (#306)',
-            href: `${ubotBe}/pull/306`,
-            detail: 'VPC · EC2 · ECR · NLB · Spot GPU ASG',
-          },
-          {
-            label: 'AWS FE CD와 자동 되돌리기 (FE #72)',
-            href: `${ubotFe}/pull/72`,
-          },
-          {
-            label: '초기 수동 CD의 Compose 충돌 수정 (#88)',
-            href: `${ubotBe}/pull/88`,
-            detail: '프로젝트 이름 통일 · 배포 전 점검 · Nginx 재생성 순서',
+            label: '상담 화면 적용과 실제 연동 확인 (FE #76)',
+            href: `${ubotFe}/pull/76`,
           },
         ],
       },
       {
-        title: '장애를 사용자보다 먼저 알기',
-        brief: {
-          plan: 'Worker로 나누고 나니 대기열이 밀리는지, LLM이 느려졌는지 로그만으로는 알기 어려웠습니다.',
-          build: [
-            'Chat Job, LLM, 검색, 임베딩, DB, Redis 지표를 역할 태그와 함께 수집',
-            '알림 규칙 6개를 Discord, Slack으로 보내고 알림마다 런북 연결',
-            '알림 설정 생성 스크립트는 값이 틀리면 아무것도 바꾸지 않고 실패',
-          ],
-          outcome: '#268 #274 병합. 로컬에서 실제 Discord·Slack으로 장애(FIRING)와 복구(RESOLVED) 알림 수신.',
-        },
-        plan: '접수와 생성을 나누자 대기열이 밀리는지, LLM이 느려졌는지, Worker가 작업을 회수하고 있는지를 로그만으로는 알기 어려웠습니다. 지표를 먼저 정하고, 장애는 사용자보다 먼저 알 수 있게 하기로 했습니다.',
-        build:
-          'Chat Job의 실행 시간과 대기 시간, 회수 사유, LLM 호출 시간과 동시 호출 수, 임베딩과 벡터 검색 시간, DB 커넥션 사용 시간, Redis 스트림 적체를 지표로 남기고 모든 지표에 role 태그를 붙였습니다(#268). Backend, Worker, PostgreSQL, Redis 장애와 Chat Job 대기 지연, LLM 시간 초과 비율에 알림 규칙 6개를 두고 Alertmanager로 Discord와 Slack에 보냅니다. 알림마다 런북을 연결했고, 알림 설정 생성 스크립트는 기준값이나 Webhook이 틀리면 아무것도 바꾸지 않고 실패합니다(#274).',
-        outcome:
-          '#268, #274가 병합됐습니다. 적체 집계 SQL은 Testcontainers PostgreSQL로, exporter의 지표 이름은 실제 컨테이너로 확인했습니다. 로컬에서 실제 Discord와 Slack으로 장애(FIRING)와 복구(RESOLVED) 알림을 받았습니다.',
-        limit:
-          '알림 수신은 로컬에서 확인했고, PR 시점에 AWS 배포 연결은 후속 작업으로 남겨 두었습니다.',
-        evidence: [
-          {
-            label: '운영 모니터링 지표 (#268)',
-            href: `${ubotBe}/pull/268`,
-            detail: 'Chat Job · LLM · 검색 · 임베딩 · DB · Redis',
-          },
-          {
-            label: 'Prometheus 장애 알림 Discord·Slack 전송 (#274)',
-            href: `${ubotBe}/pull/274`,
-            detail: '알림 규칙 6개 · 런북 · 설정 검증',
-          },
-        ],
-      },
-      {
+        group: '채팅 백엔드',
         title: 'LLM을 부르기 전에 걸러야 하는 질문',
         brief: {
           plan: '금지어가 든 질문도 임베딩과 LLM 호출까지 그대로 가고 있어, 비용이 큰 호출 앞에서 먼저 거르기로 했습니다.',
@@ -308,6 +454,7 @@ export const projects: Project[] = [
         ],
       },
       {
+        group: '채팅 백엔드',
         title: '로그인하지 않은 사용자에게 채팅을 열되, 횟수는 지키기',
         brief: {
           plan: 'JWT 로그인 없이도 채팅을 열되, LLM 비용 때문에 횟수는 제한해야 했습니다.',
@@ -342,6 +489,7 @@ export const projects: Project[] = [
         ],
       },
       {
+        group: '채팅 백엔드',
         title: '실험 결과를 코드로: 모델 서버 바꿔 끼우기',
         brief: {
           plan: '서빙 실험에서 답변과 임베딩 모두 vLLM이 앞섰지만 백엔드는 Ollama 호출에 묶여 있었습니다.',
@@ -380,6 +528,43 @@ export const projects: Project[] = [
         ],
       },
       {
+        group: '채팅 백엔드',
+        title: '검색이 정답을 놓치지 않은 뒤에, 빠르게',
+        brief: {
+          plan: 'HNSW 검색은 Profile과 벡터 유형 필터 뒤에 후보가 모자라 정답을 놓칠 수 있었습니다. 정확도를 먼저 잡고 속도를 다뤘습니다.',
+          build: [
+            '후보 누락 때문에 전체 비교(exact) 검색으로 먼저 전환',
+            'pgvector iterative scan과 후보 확장으로 HNSW를 다시 적용',
+            'Reranker는 실험 뒤 제거하고 질문 벡터 검색으로 통일',
+          ],
+          outcome: '합성 1만 건에서 p50 4.6~6.2배 개선, exact와 상위 3개 결과 동일(#251). 실제 FAQ 임베딩 재측정은 남아 있습니다.',
+        },
+        plan: 'FAQ 질문만 임베딩하면 답변에만 있는 정보가 빠지고, HNSW 검색은 Profile과 벡터 유형 필터 뒤에 후보가 모자라 정답을 놓칠 수 있었습니다. 잘못된 후보가 느린 검색보다 더 큰 문제라고 보고, 정확도를 먼저 확인한 뒤 속도를 다루기로 했습니다.',
+        build:
+          '질문+답변 벡터를 추가하고 후보 누락 때문에 한때 전체 비교(exact) 검색으로 바꿨습니다(#182). 선택적 Reranker도 붙였습니다. 후보 순서만 바꾸고, 호출이 몰리거나 연속으로 실패하면 벡터 결과로 답합니다(#194). 이후 pgvector iterative scan(strict_order, ef_search=200)을 검색 트랜잭션에만 적용하고, FAQ별 중복을 지운 뒤 모자라면 후보 범위를 두 배씩 넓혀 HNSW를 다시 적용했습니다(#251). 235문항 정정 평가와 지연, 장애 비용을 보고 Reranker는 제거해 질문 벡터 검색으로 통일했습니다(#289).',
+        outcome:
+          '#182, #194, #251, #289가 병합됐습니다. 합성 1만 건에서 FAQ 검색 p50은 28.82ms에서 4.66ms, intent 검색은 21.61ms에서 4.66ms가 됐고 exact와 상위 3개 결과가 같았습니다.',
+        limit:
+          '합성 데이터 결과라 실제 FAQ 임베딩 기준 재측정이 남아 있습니다. 1천 건에서는 HNSW 경로가 약 1.8~1.9배 느렸습니다. 소량인 상담 금지 문장 검색은 놓치면 차단 실패라 exact를 유지합니다.',
+        evidence: [
+          {
+            label: 'FAQ 벡터 검색을 HNSW로 전환 (#251)',
+            href: `${ubotBe}/pull/251`,
+            detail: 'iterative scan · 후보 확장 · 1만 건 측정',
+          },
+          {
+            label: 'FAQ 질문+답변 임베딩과 exact 전환 (#182)',
+            href: `${ubotBe}/pull/182`,
+          },
+          {
+            label: '선택적 Reranker (#194)',
+            href: `${ubotBe}/pull/194`,
+            detail: '과거 구현 · #289에서 제거',
+          },
+        ],
+      },
+      {
+        group: '채팅 백엔드',
         title: '내 컴퓨터와 CI에서 같은 기능을 검증하기',
         brief: {
           plan: 'pgvector와 PostGIS 확장 버전이 PC마다 다르면 특정 환경에서만 실패합니다.',
@@ -411,12 +596,12 @@ export const projects: Project[] = [
       },
     ],
     limitations:
-      '팀 프로젝트입니다. 회원 인증(JWT), FAQ 관리, 매장 지도 검색은 팀원이 담당했습니다. 장애 복구 시험은 로컬에서 장애마다 한 번씩 실행했고, AWS 부하 시험은 k6 합성 회원으로 한 결과입니다. 금지어 캐시와 게스트 세션은 서버 한 대를 기준으로 만들었습니다.',
+      '팀 프로젝트입니다. 회원 인증(JWT), FAQ 관리, 매장 지도 검색은 팀원이 담당했습니다. 장애 복구 시험은 로컬에서 장애마다 한 번씩 실행했고, AWS 부하 시험은 k6 합성 회원으로 한 결과입니다. 금지어 캐시와 게스트 세션은 서버 한 대를 기준으로 만들었습니다. Spot GPU 자동 확장은 구성까지 했고 실제 트래픽으로 검증하지 않았습니다.',
     proofs: [
       {
         label: '백엔드에서 직접 기여한 PR',
         href: `${ubotBe}/pulls?q=is%3Apr+is%3Amerged+author%3ACatverdose`,
-        detail: '병합 34건 (2026-10-28 기준)',
+        detail: '병합 34건 (2026-10-30 기준)',
       },
       {
         label: '부하·장애 시험 도구와 결과 (UBot-ServerTest)',
@@ -426,7 +611,7 @@ export const projects: Project[] = [
       {
         label: '프론트에서 직접 기여한 PR',
         href: `${ubotFe}/pulls?q=is%3Apr+is%3Amerged+author%3ACatverdose`,
-        detail: '병합 15건 (2026-10-28 기준)',
+        detail: '병합 15건 (2026-10-30 기준)',
       },
       {
         label: '개발 문서 현행화 (#107)',
@@ -1318,6 +1503,18 @@ export const projects: Project[] = [
 /** 첫 화면의 숫자 카드. 개인 작업과 본인 PR만 씁니다. 팀 결과는 프로젝트 카드에 둡니다. */
 export const heroProofs = [
   {
+    projectId: 'ubot',
+    value: '6,000',
+    unit: '건 AWS 시험',
+    label: '시스템 오류 4건 · DB 대조 불일치 0',
+  },
+  {
+    projectId: 'ubot',
+    value: '4',
+    unit: '종 장애 주입',
+    label: '로컬 각 100건 · 유실·중복 저장 0건',
+  },
+  {
     projectId: 'concurrency',
     value: '9',
     unit: '개 전략',
@@ -1328,18 +1525,6 @@ export const heroProofs = [
     value: '620',
     unit: '회 측정',
     label: 'Vector DB 5종, 같은 입력과 자원',
-  },
-  {
-    projectId: 'llm-serving',
-    value: '4',
-    unit: '종 엔진',
-    label: 'LLM 서빙 엔진, GPU 세 환경',
-  },
-  {
-    projectId: 'ubot',
-    value: '49',
-    unit: '개 PR',
-    label: 'UBot 백엔드 34 · 프론트 15 병합',
   },
 ]
 
@@ -1733,14 +1918,18 @@ export const stack: {
       'Docker',
       'Nginx',
       'GitHub Actions',
-      'AWS EC2',
+      'AWS(EC2, VPC, NLB, ASG, ECR, SSM, IAM)',
       'Terraform',
       'Prometheus',
       'GCP',
     ],
     uses: [
       {
-        text: 'Terraform으로 VPC부터 Spot GPU ASG까지, OIDC → ECR → SSM 배포',
+        text: '보안 그룹으로 FE·BE·State·GPU 접근 경계를 나누고 내부 NLB 뒤에 Spot GPU ASG 구성',
+        projectId: 'ubot',
+      },
+      {
+        text: 'Terraform으로 기존 자원 관리, OIDC → ECR → SSM 배포',
         projectId: 'ubot',
       },
       {

@@ -502,3 +502,169 @@
     margin-left: 0;
   }
 }
+
+/* 기능 묶음 이름 */
+.feature-index-group {
+  display: block;
+  padding: var(--s-3) 0 var(--s-1);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--body);
+}
+.feature-group {
+  grid-column: 1 / -1;
+  margin: var(--s-6) 0 0;
+}
+.feature-group:first-child {
+  margin-top: 0;
+}
+
+/* UBot AWS 구성도 */
+.aws-topology {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  padding: var(--s-6);
+  background-color: var(--canvas);
+  background-image: radial-gradient(var(--hairline) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+.aws-diagram,
+.aws-vpc,
+.aws-lane {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.aws-diagram {
+  flex-direction: column;
+  align-items: stretch;
+}
+.aws-public {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin-bottom: var(--s-2);
+}
+.aws-public .aws-node {
+  flex: 0 0 180px;
+}
+.aws-vpc {
+  position: relative;
+  display: grid;
+  grid-template-columns: 170px 92px 170px minmax(0, 1fr);
+  gap: var(--s-2);
+  padding: var(--s-8) var(--s-4) var(--s-4);
+  border: 1px dashed var(--faint);
+  border-radius: var(--r-md);
+}
+.aws-vpc-label {
+  position: absolute;
+  top: var(--s-2);
+  left: var(--s-4);
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--body);
+}
+.aws-lanes {
+  display: grid;
+  flex: 1;
+  gap: var(--s-4);
+  min-width: 0;
+}
+.aws-lane {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr) 92px minmax(0, 1fr);
+  gap: var(--s-2);
+}
+.aws-node {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 10px 12px;
+  word-break: keep-all;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-sm);
+  background: var(--elevated);
+  box-shadow: var(--shadow-whisper);
+}
+.aws-node > svg {
+  color: var(--body);
+}
+.aws-node > strong,
+.aws-node > span,
+.aws-edge > strong,
+.aws-edge > span {
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 16px;
+}
+.aws-node > strong {
+  font-weight: 500;
+}
+.aws-node > span {
+  color: var(--body);
+}
+.aws-edge {
+  display: grid;
+  gap: 2px;
+  word-break: keep-all;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--faint);
+  text-align: center;
+}
+.aws-edge > strong {
+  font-weight: 500;
+  color: var(--link-deep);
+}
+.aws-edge > span {
+  color: var(--body);
+}
+.aws-deploy {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  line-height: 16px;
+}
+.aws-deploy li {
+  padding: 4px 10px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-pill);
+  background: var(--elevated);
+}
+.aws-deploy li + li::before {
+  content: '→ ';
+  color: var(--body);
+}
+@media (max-width: 1080px) {
+  .aws-public {
+    flex-direction: column;
+    align-items: stretch;
+    margin-bottom: 0;
+  }
+  .aws-public .aws-node {
+    flex: none;
+  }
+  .aws-topology {
+    padding: var(--s-4);
+  }
+  .aws-diagram,
+  .aws-vpc,
+  .aws-lane {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .aws-edge {
+    padding: 2px 0 2px var(--s-3);
+    border-bottom: 0;
+    border-left: 1px solid var(--faint);
+    margin-left: var(--s-3);
+    text-align: left;
+  }
+}
